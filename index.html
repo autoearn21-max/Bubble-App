@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bubble Reward</title>
+<!-- Telegram Web App SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- Monetag SDK Initialization -->
+<script src='//libtl.com/sdk.js' data-zone='11102501' data-sdk='show_11102501'></script>
+<!-- AdsGram SDK via CDN -->
+<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --gold: #FFD700;
+    --gold2: #FFA500;
+    --blue: #00C6FF;
+    --blue2: #0072FF;
+    --purple: #9B59B6;
+    --purple2: #6C3483;
+    --bg: #060612;
+    --bg2: #0D0D24;
+    --bg3: #12122A;
+    --card: rgba(255,255,255,0.05);
+    --card-border: rgba(255,255,255,0.08);
+    --text: #E8E8FF;
+    --text2: #9999BB;
+    --green: #00E676;
+    --red: #FF4444;
+    --radius: 16px;
+    --glow-gold: 0 0 20px rgba(255,215,0,0.4);
+    --glow-blue: 0 0 20px rgba(0,198,255,0.4);
+    --glow-purple: 0 0 20px rgba(155,89,182,0.4);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  
+  body {
+    font-family: 'Exo 2', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding-bottom: 80px;
+  }
+
+  body::before {
+    content:'';
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(0,114,255,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 30% at 80% 80%, rgba(155,89,182,0.10) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 50% at 60% 30%, rgba(255,215,0,0.05) 0%, transparent 60%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .page { display:none; position:relative; z-index:1; animation: fadeIn 0.3s ease; }
+  .page.active { display:block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0;
+    background: rgba(10,10,25,0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--card-border);
+    display:flex; z-index:100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-btn {
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: 10px 0; gap:4px; cursor:pointer; transition:all 0.2s;
+    border:none; background:none; color: var(--text2); font-family:'Exo 2',sans-serif;
+  }
+  .nav-btn.active { color: var(--gold); }
+  .nav-btn .nav-icon { font-size:22px; transition:transform 0.2s; }
+  .nav-btn.active .nav-icon { transform:scale(1.2); }
+  .nav-btn span { font-size:10px; font-weight:600; letter-spacing:0.5px; }
+
+  .page-header { padding: 16px 16px 8px; display:flex; align-items:center; gap:12px; }
+  .page-title {
+    font-family:'Orbitron',monospace; font-size:18px; font-weight:700;
+    background: linear-gradient(135deg, var(--gold), var(--blue));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+
+  .card { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); backdrop-filter: blur(10px); }
+  .card-glow-gold { box-shadow: var(--glow-gold), inset 0 1px 0 rgba(255,215,0,0.1); border-color: rgba(255,215,0,0.2); }
+  .card-glow-blue { box-shadow: var(--glow-blue), inset 0 1px 0 rgba(0,198,255,0.1); border-color: rgba(0,198,255,0.2); }
+  .card-glow-purple { box-shadow: var(--glow-purple), inset 0 1px 0 rgba(155,89,182,0.1); border-color: rgba(155,89,182,0.2); }
+
+  .user-dashboard { margin: 16px; padding: 20px; }
+  .user-top { display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+  .user-avatar {
+    width:56px; height:56px; border-radius:50%;
+    background: linear-gradient(135deg, var(--blue2), var(--purple));
+    display:flex; align-items:center; justify-content:center;
+    font-size:24px; font-weight:700; color:#fff;
+    border:2px solid rgba(0,198,255,0.4);
+    box-shadow: 0 0 15px rgba(0,114,255,0.4); flex-shrink:0;
+  }
+  .user-info h3 { font-family:'Orbitron',monospace; font-size:15px; font-weight:700; color:var(--text); }
+  .user-id { font-size:11px; color:var(--text2); margin-top:2px; }
+
+  .balance-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .balance-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius:12px; padding:12px 8px; text-align:center; }
+  .balance-icon { font-size:20px; margin-bottom:4px; }
+  .balance-val { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; color: var(--gold); }
+  .balance-label { font-size:10px; color:var(--text2); margin-top:2px; }
+
+  .section-title {
+    font-family:'Orbitron',monospace; font-size:13px; font-weight:700;
+    color:var(--gold); letter-spacing:1px; padding:16px 16px 8px; display:flex; align-items:center; gap:8px;
+  }
+  .section-title::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, rgba(255,215,0,0.3), transparent); }
+
+  .wheel-container { margin: 0 16px 16px; padding: 20px 16px; text-align:center; }
+  .wheel-wrap { position:relative; width:280px; height:280px; margin:0 auto 16px; }
+  #spinCanvas, #autoSpinCanvas { width:100%; height:100%; border-radius:50%; filter: drop-shadow(0 0 20px rgba(255,215,0,0.5)); }
+  .wheel-pointer {
+    position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+    width:0; height:0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 28px solid var(--gold);
+    filter: drop-shadow(0 2px 6px rgba(255,215,0,0.8)); z-index:10;
+  }
+  .wheel-center {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:44px; height:44px; border-radius:50%; background: linear-gradient(135deg, #1a1a3a, #0a0a1a);
+    border:3px solid var(--gold); display:flex; align-items:center; justify-content:center; font-size:18px; z-index:10;
+    box-shadow: 0 0 15px rgba(255,215,0,0.6);
+  }
+
+  .spin-btn {
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    color:#000; border:none; border-radius:50px; padding:14px 40px; font-family:'Orbitron',monospace;
+    font-size:14px; font-weight:900; cursor:pointer; box-shadow: 0 4px 20px rgba(255,165,0,0.5);
+    transition:all 0.2s; letter-spacing:2px; width:100%; margin-top:8px;
+  }
+  .spin-btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow: 0 6px 25px rgba(255,165,0,0.7); }
+  .spin-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+
+  .claim-btn {
+    background: linear-gradient(135deg, var(--green), #00A854);
+    color:#000; border:none; border-radius:50px; padding:12px 32px; font-family:'Orbitron',monospace;
+    font-size:13px; font-weight:700; cursor:pointer; width:100%; margin-top:8px;
+    box-shadow: 0 4px 15px rgba(0,230,118,0.4); transition:all 0.2s;
+  }
+
+  .spin-result {
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.1));
+    border: 1px solid rgba(255,215,0,0.3); border-radius:12px; padding:12px; margin-top:12px;
+    font-family:'Orbitron',monospace; font-size:15px; font-weight:700; color: var(--gold); display:none;
+  }
+
+  .spin-info { font-size:11px; color:var(--text2); margin-top:8px; display:flex; justify-content:center; gap:6px; align-items:center; }
+  .auto-spin-controls { display:flex; gap:8px; margin-top:8px; }
+  .stop-btn {
+    background: linear-gradient(135deg, var(--red), #CC0000); color:#fff; border:none; border-radius:50px;
+    padding:14px 24px; font-family:'Orbitron',monospace; font-size:13px; font-weight:700; cursor:pointer; flex:1; transition:all 0.2s;
+  }
+  .auto-progress { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px 16px; margin-top:10px; }
+  .progress-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .progress-label { font-size:11px; color:var(--text2); }
+  .progress-val { font-family:'Orbitron',monospace; font-size:12px; color:var(--blue); font-weight:700; }
+  .progress-bar-wrap { height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
+  .progress-bar-fill { height:100%; border-radius:3px; background: linear-gradient(90deg, var(--blue2), var(--blue)); transition:width 0.3s; }
+  .countdown-timer { font-family:'Orbitron',monospace; font-size:13px; color:var(--purple); text-align:center; margin-top:8px; font-weight:700; }
+
+  .daily-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:0 16px 4px; }
+  .daily-item {
+    background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:10px 6px; text-align:center; transition:all 0.2s; position:relative; overflow:hidden;
+  }
+  .daily-item.current { border-color: rgba(255,215,0,0.5); background: rgba(255,215,0,0.08); box-shadow: 0 0 15px rgba(255,215,0,0.2); }
+  .daily-item.claimed { opacity:0.5; }
+  .daily-item.claimed::after { content:'✓'; position:absolute; top:4px; right:6px; color:var(--green); font-size:12px; font-weight:700; }
+  .daily-day { font-size:10px; color:var(--text2); margin-bottom:4px; }
+  .daily-coin { font-size:18px; }
+  .daily-amt { font-family:'Orbitron',monospace; font-size:11px; color:var(--gold); font-weight:700; margin-top:2px; }
+
+  .daily-claim-btn {
+    margin:12px 16px 0; background: linear-gradient(135deg, var(--gold), var(--gold2)); color:#000; border:none; border-radius:50px;
+    padding:14px; font-family:'Orbitron',monospace; font-size:13px; font-weight:700; cursor:pointer; width:calc(100% - 32px); box-shadow: 0 4px 20px rgba(255,165,0,0.4); transition:all 0.2s;
+  }
+
+  #gameCanvas { width:100%; border-radius:var(--radius); display:block; }
+  .game-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; gap:8px; }
+  .game-stat { background: var(--card); border:1px solid var(--card-border); border-radius:10px; padding:8px 14px; text-align:center; flex:1; }
+  .game-stat-val { font-family:'Orbitron',monospace; font-size:14px; font-weight:700; color:var(--gold); }
+  .game-stat-label { font-size:10px; color:var(--text2); margin-top:2px; }
+  .game-controls { display:flex; gap:8px; padding:0 16px 12px; }
+  .game-btn { flex:1; padding:12px; border:none; border-radius:12px; font-family:'Orbitron',monospace; font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .game-btn-start { background: linear-gradient(135deg, var(--green), #00A854); color:#000; }
+  .game-btn-pause { background: linear-gradient(135deg, var(--gold), var(--gold2)); color:#000; }
+  .game-canvas-wrap { margin:0 16px; position:relative; border:1px solid rgba(0,198,255,0.2); border-radius:var(--radius); overflow:hidden; box-shadow: 0 0 30px rgba(0,114,255,0.15); }
+  .game-overlay { position:absolute; top:0; left:0; right:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background: rgba(6,6,18,0.92); border-radius:var(--radius); gap:12px; }
+  .game-overlay-title { font-family:'Orbitron',monospace; font-size:20px; font-weight:900; background: linear-gradient(135deg, var(--gold), var(--blue)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .game-overlay p { font-size:13px; color:var(--text2); text-align:center; padding:0 20px; }
+
+  .task-tabs { display:flex; margin:0 16px 12px; background:rgba(255,255,255,0.04); border-radius:12px; padding:4px; }
+  .task-tab {
+    flex:1; padding:8px; text-align:center; border-radius:9px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.2s; color:var(--text2); border:none; background:none; font-family:'Exo 2',sans-serif;
+  }
+  .task-tab.active { background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(0,198,255,0.1)); color:var(--gold); box-shadow: 0 2px 8px rgba(255,215,0,0.2); }
+  .task-panel { display:none; }
+  .task-panel.active { display:block; }
+
+  .task-card { margin:0 16px 10px; padding:14px 16px; }
+  .task-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .task-name { font-weight:700; font-size:13px; color:var(--text); }
+  .task-reward { font-family:'Orbitron',monospace; font-size:12px; font-weight:700; color:var(--blue); white-space:nowrap; }
+  .task-progress-text { display:flex; justify-content:space-between; font-size:11px; color:var(--text2); margin-bottom:6px; }
+  .task-bar-wrap { height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-bottom:10px; }
+  .task-bar-fill { height:100%; border-radius:3px; transition:width 0.5s; background:linear-gradient(90deg,var(--blue2),var(--blue)); }
+  .task-action-btn { width:100%; padding:9px; border:none; border-radius:10px; font-family:'Exo 2',sans-serif; font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .task-watch-btn { background:rgba(0,198,255,0.15); color:var(--blue); border:1px solid rgba(0,198,255,0.25); }
+  .task-claim-btn-active { background:linear-gradient(135deg,var(--gold),var(--gold2)); color:#000; }
+  .task-done-btn { background:rgba(0,230,118,0.1); color:var(--green); border:1px solid rgba(0,230,118,0.2); cursor:default; }
+
+  .extra-ad-card { margin:0 16px 10px; padding:16px; display:flex; align-items:center; gap:14px; cursor:pointer; transition:all 0.2s; }
+  .extra-ad-card:active { transform:scale(0.98); }
+  .extra-ad-icon { width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,rgba(0,114,255,0.3),rgba(155,89,182,0.3)); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+  .extra-ad-info { flex:1; }
+  .extra-ad-title { font-weight:700; font-size:13px; }
+  .extra-ad-sub { font-size:11px; color:var(--text2); margin-top:2px; }
+  .extra-ad-reward { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; color:var(--gold); }
+
+  .wallet-balance { margin:0 16px 16px; padding:20px; }
+  .wallet-bal-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .wallet-bal-item { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:14px 8px; text-align:center; }
+  .wallet-bal-icon { font-size:22px; margin-bottom:6px; }
+  .wallet-bal-val { font-family:'Orbitron',monospace; font-size:12px; font-weight:700; color:var(--gold); }
+  .wallet-bal-label { font-size:10px; color:var(--text2); margin-top:3px; }
+
+  .withdraw-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 16px 12px; }
+  .withdraw-option { border:1px solid rgba(255,215,0,0.15); border-radius:12px; padding:12px 10px; text-align:center; cursor:pointer; transition:all 0.2s; background:rgba(255,215,0,0.04); }
+  .withdraw-option.selected { border-color:var(--gold); background:rgba(255,215,0,0.12); box-shadow: 0 0 12px rgba(255,215,0,0.2); }
+  .withdraw-amount { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; color:var(--gold); }
+  .withdraw-diamond { font-size:11px; color:var(--text2); margin-top:4px; }
+
+  .withdraw-detail-card { margin:0 16px 12px; padding:16px; }
+  .withdraw-detail-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px; }
+  .withdraw-detail-row:last-child { border-bottom:none; }
+  .withdraw-detail-label { color:var(--text2); }
+  .withdraw-detail-val { font-weight:600; color:var(--text); }
+
+  .wallet-connect-btn {
+    margin:0 16px 12px; width:calc(100% - 32px); padding:14px; border:none; border-radius:50px; background:linear-gradient(135deg,#0088CC,#0066AA); color:#fff;
+    font-family:'Orbitron',monospace; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow: 0 4px 15px rgba(0,136,204,0.4);
+  }
+  .wallet-connect-btn.connected { background:linear-gradient(135deg,var(--green),#00A854); color:#000; }
+  .withdraw-btn {
+    margin:0 16px 16px; width:calc(100% - 32px); padding:14px; border:none; border-radius:50px; background:linear-gradient(135deg,var(--purple),var(--purple2)); color:#fff;
+    font-family:'Orbitron',monospace; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; box-shadow: 0 4px 15px rgba(108,52,131,0.4);
+  }
+  .withdraw-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .tx-item { margin:0 16px 8px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; }
+  .tx-date { font-size:11px; color:var(--text2); }
+  .tx-addr { font-size:12px; font-weight:600; margin-top:2px; }
+  .tx-right { text-align:right; }
+  .tx-amount { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; color:var(--gold); }
+  .tx-status { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; margin-top:3px; display:inline-block; }
+  .tx-pending { background:rgba(255,215,0,0.15); color:var(--gold); }
+
+  #toast {
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:rgba(20,20,40,0.95); border:1px solid rgba(255,255,255,0.12);
+    border-radius:50px; padding:10px 20px; font-size:13px; font-weight:600; opacity:0; transition:all 0.3s; z-index:9999; white-space:nowrap;
+    backdrop-filter:blur(20px); box-shadow:0 4px 20px rgba(0,0,0,0.5); max-width:calc(100vw - 32px); text-align:center; pointer-events:none;
+  }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  #toast.gold { border-color:rgba(255,215,0,0.4); color:var(--gold); }
+  #toast.green { border-color:rgba(0,230,118,0.4); color:var(--green); }
+  #toast.red { border-color:rgba(255,68,68,0.4); color:var(--red); }
+  #toast.blue { border-color:rgba(0,198,255,0.4); color:var(--blue); }
+  #toast.purple { border-color:rgba(155,89,182,0.4); color:var(--purple); }
+
+  /* Monetag Loading Spinner Overlay */
+  #monetagLoadingOverlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(6,6,18,0.85);
+    z-index: 10005; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  }
+  .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--blue); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  ::-webkit-scrollbar { width:3px; }
+  ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<!-- MONETAG LOADING OVERLAY -->
+<div id="monetagLoadingOverlay">
+  <div class="spinner"></div>
+  <div style="font-size:13px; color:var(--text2); font-family:'Orbitron',monospace;">LOADING AD...</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ========== PAGE: HOME ========== -->
+<div class="page active" id="page-home">
+  <div class="page-header">
+    <div class="page-title">BUBBLE REWARD</div>
+    <div style="margin-left:auto" class="badge">⚡ LIVE</div>
+  </div>
+
+  <!-- User Dashboard -->
+  <div class="card card-glow-blue user-dashboard">
+    <div class="user-top">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info">
+        <h3 id="userName">Loading...</h3>
+        <div class="user-id" id="userId">ID: —</div>
+      </div>
+      <div style="margin-left:auto" class="badge blue">🔗 TG</div>
+    </div>
+    <div class="balance-grid">
+      <div class="balance-item">
+        <div class="balance-icon">🪙</div>
+        <div class="balance-val" id="coinBal">0</div>
+        <div class="balance-label">Coins</div>
+      </div>
+      <div class="balance-item">
+        <div class="balance-icon">💎</div>
+        <div class="balance-val" id="ticketBal">0</div>
+        <div class="balance-label">Tickets</div>
+      </div>
+      <div class="balance-item">
+        <div class="balance-icon">♦️</div>
+        <div class="balance-val" id="diamondBal">0</div>
+        <div class="balance-label">Diamonds</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual Spin -->
+  <div class="section-title">🎡 MANUAL SPIN WHEEL</div>
+  <div class="card card-glow-gold wheel-container">
+    <div class="wheel-wrap">
+      <div class="wheel-pointer"></div>
+      <canvas id="spinCanvas" width="280" height="280"></canvas>
+      <div class="wheel-center">⭐</div>
+    </div>
+    <div class="spin-info">
+      <span>🆓 First spin FREE</span>
+      <span>·</span>
+      <span>Watch ad to spin again</span>
+    </div>
+    <div id="spinResult" class="spin-result">🎉 You won: <span id="spinWinText">—</span></div>
+    <button class="spin-btn" id="spinBtn" onclick="doManualSpin()">🎰 SPIN</button>
+    <button class="claim-btn" id="claimBtn" style="display:none" onclick="doClaimSpin()">✅ CLAIM REWARD</button>
+  </div>
+
+  <!-- Auto Spin -->
+  <div class="section-title">⚡ AUTO SPIN WHEEL</div>
+  <div class="card card-glow-purple wheel-container">
+    <div class="wheel-wrap">
+      <div class="wheel-pointer"></div>
+      <canvas id="autoSpinCanvas" width="280" height="280"></canvas>
+      <div class="wheel-center">🔄</div>
+    </div>
+    <div class="auto-progress">
+      <div class="progress-row">
+        <span class="progress-label">Daily Auto Spins</span>
+        <span class="progress-val" id="autoSpinCount">0 / 100</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="autoSpinBar" style="width:0%"></div>
+      </div>
+      <div class="countdown-timer" id="autoResetTimer">Next Reset: --:--:--</div>
+    </div>
+    <div class="auto-spin-controls">
+      <button class="spin-btn" id="autoSpinBtn" onclick="startAutoSpin()" style="flex:1">⚡ AUTO SPIN</button>
+      <button class="stop-btn" id="autoStopBtn" onclick="stopAutoSpin()" style="display:none;flex:0.5">⏹ STOP</button>
+    </div>
+  </div>
+
+  <!-- Daily Reward -->
+  <div class="section-title">📅 DAILY REWARD</div>
+  <div class="card card-glow-gold" style="margin:0 16px 16px; padding:16px 0 12px;">
+    <div class="daily-grid" id="dailyGrid"></div>
+    <button class="daily-claim-btn" id="dailyClaimBtn" onclick="claimDaily()">🎁 CLAIM DAILY REWARD</button>
+  </div>
+</div>
+
+<!-- ========== PAGE: GAME ========== -->
+<div class="page" id="page-game">
+  <div class="page-header">
+    <div class="page-title">🎮 BUBBLE GAME</div>
+    <div class="badge blue">∞ Levels</div>
+  </div>
+
+  <div class="game-header">
+    <div class="game-stat">
+      <div class="game-stat-val" id="gameLvl">1</div>
+      <div class="game-stat-label">Level</div>
+    </div>
+    <div class="game-stat">
+      <div class="game-stat-val" id="gameScore">0</div>
+      <div class="game-stat-label">Score</div>
+    </div>
+    <div class="game-stat">
+      <div class="game-stat-val" id="gameHigh">0</div>
+      <div class="game-stat-label">Best</div>
+    </div>
+    <div class="game-stat">
+      <div class="game-stat-val" id="gameReward">+10🪙</div>
+      <div class="game-stat-label">Reward</div>
+    </div>
+  </div>
+
+  <div class="game-canvas-wrap">
+    <canvas id="gameCanvas" width="360" height="380"></canvas>
+    <div class="game-overlay" id="gameOverlay">
+      <div class="game-overlay-title">🫧 BUBBLE POP</div>
+      <p>Pop all bubbles to earn coins! Watch an ad to start playing.</p>
+      <button class="spin-btn" style="width:auto;padding:12px 32px" onclick="startGame()">▶ START GAME</button>
+    </div>
+  </div>
+
+  <div class="game-controls">
+    <button class="game-btn game-btn-pause" id="pauseBtn" onclick="togglePause()" style="display:none">⏸ Pause</button>
+    <button class="game-btn game-btn-start" onclick="startGame()" id="restartBtn" style="display:none">🔄 Restart</button>
+  </div>
+
+  <div class="section-title" style="margin-top:8px">📊 LEVEL REWARDS</div>
+  <div style="padding:0 16px 16px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;" id="levelRewards"></div>
+</div>
+
+<!-- ========== PAGE: TASKS ========== -->
+<div class="page" id="page-tasks">
+  <div class="page-header">
+    <div class="page-title">📋 TASKS</div>
+  </div>
+
+  <div class="task-tabs">
+    <button class="task-tab active" onclick="switchTaskTab(event, 'adsgram')">AdsGram Tasks</button>
+    <button class="task-tab" onclick="switchTaskTab(event, 'monetag')">Monetag Tasks</button>
+    <button class="task-tab" onclick="switchTaskTab(event, 'extra')">Extra Ads</button>
+  </div>
+
+  <div class="task-panel active" id="taskPanel-adsgram">
+    <div style="padding:0 16px 10px;display:flex;align-items:center;gap:8px;">
+      <span class="badge blue">🎯 AdsGram</span>
+      <span style="font-size:11px;color:var(--text2)">Watch 25 ads per task • Earn 50 Tickets 💎</span>
+    </div>
+    <div id="adsgramTasks"></div>
+  </div>
+
+  <div class="task-panel" id="taskPanel-monetag">
+    <div style="padding:0 16px 10px;display:flex;align-items:center;gap:8px;">
+      <span class="badge purple">🎯 Monetag</span>
+      <span style="font-size:11px;color:var(--text2)">Watch 50 ads per task • Earn 50 Tickets 💎</span>
+    </div>
+    <div id="monetagTasks"></div>
+  </div>
+
+  <div class="task-panel" id="taskPanel-extra">
+    <div style="padding:0 16px 10px;display:flex;align-items:center;gap:8px;">
+      <span class="badge gold">💰 Extra Rewards</span>
+      <span style="font-size:11px;color:var(--text2)">Each ad gives random reward</span>
+    </div>
+    <div class="extra-ad-card card card-glow-blue" onclick="watchExtraAd()">
+      <div class="extra-ad-icon">📺</div>
+      <div class="extra-ad-info">
+        <div class="extra-ad-title">Watch AdsGram Ad</div>
+        <div class="extra-ad-sub">Random reward: 2🪙 5🪙 10🪙 or 1💎</div>
+      </div>
+      <div class="extra-ad-reward">WATCH</div>
+    </div>
+    <div style="padding:8px 16px; font-size:12px; color:var(--text2); text-align:center;">
+      Tap to watch an ad and earn a random reward instantly!
+    </div>
+    <div id="extraAdHistory" style="padding:0 16px 16px;"></div>
+  </div>
+</div>
+
+<!-- ========== PAGE: WALLET ========== -->
+<div class="page" id="page-wallet">
+  <div class="page-header">
+    <div class="page-title">💰 WALLET</div>
+  </div>
+
+  <div class="card card-glow-gold wallet-balance">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;font-weight:600;">TOTAL BALANCE</div>
+    <div class="wallet-bal-grid">
+      <div class="wallet-bal-item">
+        <div class="wallet-bal-icon">🪙</div>
+        <div class="wallet-bal-val" id="wCoin">0</div>
+        <div class="wallet-bal-label">Coins</div>
+      </div>
+      <div class="wallet-bal-item">
+        <div class="wallet-bal-icon">💎</div>
+        <div class="wallet-bal-val" id="wTicket">0</div>
+        <div class="wallet-bal-label">Tickets</div>
+      </div>
+      <div class="wallet-bal-item">
+        <div class="wallet-bal-icon">♦️</div>
+        <div class="wallet-bal-val" id="wDiamond">0</div>
+        <div class="wallet-bal-label">Diamonds</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">💸 WITHDRAWAL</div>
+  <div class="withdraw-grid" id="withdrawGrid"></div>
+
+  <div class="card withdraw-detail-card" id="withdrawDetail" style="display:none">
+    <div class="withdraw-detail-row">
+      <span class="withdraw-detail-label">Selected Amount</span>
+      <span class="withdraw-detail-val" id="wdAmount">—</span>
+    </div>
+    <div class="withdraw-detail-row">
+      <span class="withdraw-detail-label">Required Diamonds</span>
+      <span class="withdraw-detail-val" id="wdDiamonds">—</span>
+    </div>
+    <div class="withdraw-detail-row">
+      <span class="withdraw-detail-label">Network Fee</span>
+      <span class="withdraw-detail-val" id="wdFee">0.05 ♦️</span>
+    </div>
+    <div class="withdraw-detail-row">
+      <span class="withdraw-detail-label">You Receive</span>
+      <span class="withdraw-detail-val" style="color:var(--green)" id="wdReceive">—</span>
+    </div>
+  </div>
+
+  <button class="wallet-connect-btn" id="walletConnectBtn" onclick="connectWallet()">
+    <span>💎</span> <span id="walletBtnText">Connect TON Wallet</span>
+  </button>
+
+  <button class="withdraw-btn" id="withdrawSubmitBtn" disabled onclick="submitWithdraw()">
+    📤 Submit Withdrawal
+  </button>
+
+  <div class="section-title">📜 PAYMENT HISTORY</div>
+  <div id="txHistory"></div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-home" onclick="navigate('home')">
+    <span class="nav-icon">🏠</span><span>Home</span>
+  </button>
+  <button class="nav-btn" id="nav-game" onclick="navigate('game')">
+    <span class="nav-icon">🎮</span><span>Game</span>
+  </button>
+  <button class="nav-btn" id="nav-tasks" onclick="navigate('tasks')">
+    <span class="nav-icon">📋</span><span>Tasks</span>
+  </button>
+  <button class="nav-btn" id="nav-wallet" onclick="navigate('wallet')">
+    <span class="nav-icon">💰</span><span>Wallet</span>
+  </button>
+</nav>
+
+<script>
+// =============================================
+// STATE MANAGEMENT
+// =============================================
+const STATE = {
+  user: { name:'User', id:'123456789', avatar:'U' },
+  balance: { coins:0, tickets:0, diamonds:0 },
+  spin: {
+    count:0, autoCount:0, autoMaxPerCycle:100,
+    autoRunning:false, pendingWin:0,
+    lastAutoReset: Date.now()
+  },
+  daily: {
+    rewards:[10,20,30,50,70,90,100],
+    claimed:[], lastClaim:null, currentStreak:0
+  },
+  game: {
+    level:1, score:0, highScore:0, running:false,
+    paused:false, bubbles:[], animFrame:null
+  },
+  tasks: {
+    adsgram: Array(5).fill(0).map((_,i)=>({id:i+1,progress:0,target:25,reward:50,claimed:false})),
+    monetag: Array(5).fill(0).map((_,i)=>({id:i+1,progress:0,target:50,reward:50,claimed:false}))
+  },
+  wallet: { connected:false, address:'', selectedWithdraw:null },
+  txHistory: [],
+  extraAdHistory: []
+};
+
+const WITHDRAW_OPTIONS = [
+  {coins:'2M', coinVal:2000000, diamonds:2000, receive:0.15},
+  {coins:'4M', coinVal:4000000, diamonds:3800, receive:0.30},
+  {coins:'6M', coinVal:6000000, diamonds:5600, receive:0.45},
+  {coins:'8M', coinVal:8000000, diamonds:7200, receive:0.62},
+  {coins:'10M', coinVal:10000000, diamonds:8800, receive:0.80},
+];
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('bubbleRewardState');
+    if(saved) {
+      const parsed = JSON.parse(saved);
+      Object.assign(STATE.balance, parsed.balance||{});
+      Object.assign(STATE.spin, parsed.spin||{});
+      Object.assign(STATE.daily, parsed.daily||{});
+      if(parsed.tasks) Object.assign(STATE.tasks, parsed.tasks);
+      if(parsed.wallet) Object.assign(STATE.wallet, parsed.wallet);
+      if(parsed.txHistory) STATE.txHistory = parsed.txHistory;
+      if(parsed.extraAdHistory) STATE.extraAdHistory = parsed.extraAdHistory;
+      STATE.game.highScore = parsed.gameHighScore||0;
+    }
+  } catch(e){}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem('bubbleRewardState', JSON.stringify({
+      balance: STATE.balance,
+      spin: STATE.spin,
+      daily: STATE.daily,
+      tasks: STATE.tasks,
+      wallet: STATE.wallet,
+      txHistory: STATE.txHistory,
+      extraAdHistory: STATE.extraAdHistory,
+      gameHighScore: STATE.game.highScore
+    }));
+  } catch(e){}
+}
+
+// =============================================
+// TELEGRAM INIT
+// =============================================
+function initTelegram() {
+  try {
+    const tg = window.Telegram?.WebApp;
+    if(tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor('#060612');
+      tg.setBackgroundColor('#060612');
+      const u = tg.initDataUnsafe?.user;
+      if(u) {
+        STATE.user.name = u.first_name + (u.last_name?' '+u.last_name:'');
+        STATE.user.id = String(u.id);
+        STATE.user.avatar = STATE.user.name.charAt(0).toUpperCase();
+      }
+    }
+  } catch(e){}
+  document.getElementById('userName').textContent = STATE.user.name;
+  document.getElementById('userId').textContent = 'ID: '+STATE.user.id;
+  document.getElementById('userAvatar').textContent = STATE.user.avatar;
+}
+
+// =============================================
+// AD SYSTEM - INTEGRATED WITH ADSGRAM & MONETAG
+// =============================================
+
+// 1. AdsGram Handler (Block ID: 34122)
+function triggerAdsGramAd(successCallback) {
+  if (window.Adsgram) {
+    const adController = window.Adsgram.init({ blockId: "34122" });
+    adController.show()
+      .then((result) => {
+        // User finished watching ad completely
+        successCallback();
+      })
+      .catch((result) => {
+        showToast('❌ Ad skipped or failed to load.', 'red');
+      });
+  } else {
+    showToast('⚠️ AdsGram SDK not ready. Try again later.', 'red');
+  }
+}
+
+// 2. Monetag Handler (Zone: 11102501, Global SDK Function: show_11102501)
+function triggerMonetagAd(successCallback) {
+  if (typeof window.show_11102501 === 'function') {
+    const overlay = document.getElementById('monetagLoadingOverlay');
+    overlay.style.display = 'flex'; // Show loading spinner
+
+    window.show_11102501().then(() => {
+      overlay.style.display = 'none';
+      successCallback();
+    }).catch((err) => {
+      overlay.style.display = 'none';
+      // Monetag requires a fallback since it doesn't always handle promise rejections normally
+      showToast('⚠️ Monetag Ad error or closed.', 'red');
+    });
+
+    // Safeguard timeout to remove overlay if Monetag modal takes too long to draw
+    setTimeout(() => { overlay.style.display = 'none'; }, 5000);
+  } else {
+    showToast('⚠️ Monetag SDK not loaded yet.', 'red');
+  }
+}
+
+// =============================================
+// BALANCE & UTILS
+// =============================================
+function updateBalanceDisplay() {
+  const fmt = n => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'K' : String(n);
+  document.getElementById('coinBal').textContent = fmt(STATE.balance.coins);
+  document.getElementById('ticketBal').textContent = fmt(STATE.balance.tickets);
+  document.getElementById('diamondBal').textContent = fmt(STATE.balance.diamonds);
+  document.getElementById('wCoin').textContent = fmt(STATE.balance.coins);
+  document.getElementById('wTicket').textContent = fmt(STATE.balance.tickets);
+  document.getElementById('wDiamond').textContent = fmt(STATE.balance.diamonds);
+}
+
+function addCoins(amount) {
+  STATE.balance.coins += amount;
+  updateBalanceDisplay();
+  saveState();
+  showToast('+'+amount+' 🪙 Coins Added!','gold');
+}
+
+let toastTimer;
+function showToast(msg, type='gold') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show '+type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.className=''; }, 2500);
+}
+
+// =============================================
+// SPIN WHEEL
+// =============================================
+const SPIN_SEGMENTS = [
+  { label:'50 Coins',  value:50,  color:'#1a1a4a', text:'#FFD700', prob:0.35 },
+  { label:'70 Coins',  value:70,  color:'#1a2a1a', text:'#00E676', prob:0.25 },
+  { label:'90 Coins',  value:90,  color:'#2a1a1a', text:'#FF6B6B', prob:0.18 },
+  { label:'100 Coins', value:100, color:'#1a1a3a', text:'#00C6FF', prob:0.12 },
+  { label:'120 Coins', value:120, color:'#2a1a2a', text:'#CE93D8', prob:0.05 },
+  { label:'140 Coins', value:140, color:'#1a2a2a', text:'#80DEEA', prob:0.03 },
+  { label:'150 Coins', value:150, color:'#2a2a0a', text:'#FFAB40', prob:0.01 },
+  { label:'Try Again', value:0,   color:'#1a1a1a', text:'#888',    prob:0.01 }
+];
+
+function drawWheel(canvasId, rotation=0) {
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2, r = W/2 - 8;
+  ctx.clearRect(0,0,W,H);
+
+  const arc = (2*Math.PI)/SPIN_SEGMENTS.length;
+  SPIN_SEGMENTS.forEach((seg,i)=>{
+    const start = rotation + i*arc;
+    const end = start + arc;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,end); ctx.closePath();
+    ctx.fillStyle = seg.color; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth=1; ctx.stroke();
+    
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(start + arc/2);
+    ctx.textAlign = 'right'; ctx.fillStyle = seg.text;
+    ctx.font = `bold ${seg.label.length>8?'9':'11'}px Orbitron,sans-serif`;
+    ctx.fillText(seg.label, r-10, 4);
+    ctx.restore();
+  });
+}
+
+function weightedRandom() {
+  let r = Math.random(), cumul=0;
+  for(const seg of SPIN_SEGMENTS) {
+    cumul += seg.prob;
+    if(r <= cumul) return seg;
+  }
+  return SPIN_SEGMENTS[0];
+}
+
+let spinAnimating = false;
+let spinRotation = 0;
+let autoSpinRotation = 0;
+
+function animateSpin(canvasId, targetAngle, duration=3500, cb) {
+  const start = performance.now();
+  const startRot = canvasId==='spinCanvas' ? spinRotation : autoSpinRotation;
+  const totalAngle = targetAngle + Math.PI*8;
+  function step(now) {
+    const elapsed = now - start;
+    const t = Math.min(elapsed/duration, 1);
+    const ease = 1 - Math.pow(1-t, 4);
+    const cur = startRot + totalAngle * ease;
+    if(canvasId==='spinCanvas') spinRotation = cur;
+    else autoSpinRotation = cur;
+    drawWheel(canvasId, cur);
+    if(t < 1) requestAnimationFrame(step);
+    else { if(cb) cb(); }
+  }
+  requestAnimationFrame(step);
+}
+
+let pendingManualWin = null;
+
+function doManualSpin() {
+  if(spinAnimating) return;
+  const btn = document.getElementById('spinBtn');
+  
+  const processSpin = () => {
+    spinAnimating = true;
+    btn.disabled = true;
+    const win = weightedRandom();
+    pendingManualWin = win;
+    const segIdx = SPIN_SEGMENTS.indexOf(win);
+    const arc = (2*Math.PI)/8;
+    const targetAngle = (2*Math.PI) - (segIdx*arc + arc/2) - spinRotation%(2*Math.PI);
+    animateSpin('spinCanvas', targetAngle, 3500, () => {
+      spinAnimating = false;
+      showSpinResult(win);
+    });
+    STATE.spin.count++;
+    saveState();
+  };
+
+  if(STATE.spin.count === 0) {
+    processSpin(); // First Spin Free
+  } else {
+    triggerAdsGramAd(processSpin); // AdsGram required for subsequent spins
+  }
+}
+
+function showSpinResult(win) {
+  const resultEl = document.getElementById('spinResult');
+  const winText = document.getElementById('spinWinText');
+  const claimBtn = document.getElementById('claimBtn');
+  const spinBtn = document.getElementById('spinBtn');
+
+  if(win.value > 0) {
+    winText.textContent = win.label + ' 🎉';
+    resultEl.style.display='block';
+    claimBtn.style.display='block';
+    spinBtn.disabled = true;
+  } else {
+    showToast('😢 Try Again! Better luck next time!','red');
+    spinBtn.disabled = false;
+    resultEl.style.display='none';
+    claimBtn.style.display='none';
+    pendingManualWin = null;
+  }
+}
+
+function doClaimSpin() {
+  if(!pendingManualWin) return;
+  // Trigger AdsGram to claim reward
+  triggerAdsGramAd(() => {
+    addCoins(pendingManualWin.value);
+    pendingManualWin = null;
+    document.getElementById('spinResult').style.display='none';
+    document.getElementById('claimBtn').style.display='none';
+    document.getElementById('spinBtn').disabled = false;
+  });
+}
+
+// Auto Spin Engine
+function startAutoSpin() {
+  checkAutoSpinReset();
+  if(STATE.spin.autoCount >= 100) {
+    showToast('⛔ Daily auto spin limit reached!','red');
+    return;
+  }
+  STATE.spin.autoRunning = true;
+  document.getElementById('autoSpinBtn').style.display='none';
+  document.getElementById('autoStopBtn').style.display='block';
+  runOneAutoSpin();
+}
+
+function runOneAutoSpin() {
+  if(!STATE.spin.autoRunning) return;
+  checkAutoSpinReset();
+  if(STATE.spin.autoCount >= 100) {
+    stopAutoSpin();
+    showToast('✅ Auto spin daily limit reached!','gold');
+    return;
+  }
+  
+  // Auto spin uses Monetag Ads
+  triggerMonetagAd(() => {
+    if(!STATE.spin.autoRunning) return;
+    const win = weightedRandom();
+    const segIdx = SPIN_SEGMENTS.indexOf(win);
+    const arc = (2*Math.PI)/8;
+    const targetAngle = (2*Math.PI) - (segIdx*arc + arc/2) - autoSpinRotation%(2*Math.PI);
+    animateSpin('autoSpinCanvas', targetAngle, 1500, () => {
+      if(win.value > 0) {
+        STATE.balance.coins += win.value;
+        updateBalanceDisplay();
+        showToast('⚡ Auto: +'+win.value+' 🪙','gold');
+      }
+      STATE.spin.autoCount++;
+      updateAutoSpinDisplay();
+      saveState();
+      if(STATE.spin.autoRunning) {
+        setTimeout(runOneAutoSpin, 1000);
+      }
+    });
+  });
+}
+
+function stopAutoSpin() {
+  STATE.spin.autoRunning = false;
+  document.getElementById('autoSpinBtn').style.display='block';
+  document.getElementById('autoStopBtn').style.display='none';
+}
+
+function checkAutoSpinReset() {
+  const now = Date.now();
+  const elapsed = now - (STATE.spin.lastAutoReset||0);
+  if(elapsed >= 28*60*60*1000) {
+    STATE.spin.autoCount = 0;
+    STATE.spin.lastAutoReset = now;
+    saveState();
+  }
+}
+
+function updateAutoSpinDisplay() {
+  const count = STATE.spin.autoCount;
+  document.getElementById('autoSpinCount').textContent = count+' / 100';
+  document.getElementById('autoSpinBar').style.width = (count/100*100)+'%';
+}
+
+function updateAutoResetTimer() {
+  const elapsed = Date.now() - (STATE.spin.lastAutoReset||Date.now());
+  const remaining = Math.max(0, 28*60*60*1000 - elapsed);
+  const h = Math.floor(remaining/3600000);
+  const m = Math.floor((remaining%3600000)/60000);
+  const s = Math.floor((remaining%60000)/1000);
+  document.getElementById('autoResetTimer').textContent =
+    `Next Reset: ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// =============================================
+// DAILY REWARD
+// =============================================
+const DAILY_AMOUNTS = [10,20,30,50,70,90,100];
+
+function renderDailyGrid() {
+  const grid = document.getElementById('dailyGrid');
+  grid.innerHTML = DAILY_AMOUNTS.map((amt,i)=>{
+    const dayNum = i+1;
+    const isClaimed = STATE.daily.claimed.includes(i);
+    const isToday = getStreakDay() === i;
+    return `<div class="daily-item ${isClaimed?'claimed':''} ${isToday&&!isClaimed?'current':''}">
+      <div class="daily-day">Day ${dayNum}</div>
+      <div class="daily-coin">🪙</div>
+      <div class="daily-amt">${amt}</div>
+    </div>`;
+  }).join('');
+}
+
+function getStreakDay() { return Math.min(STATE.daily.currentStreak, 6); }
+function getTodayUTC() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
+}
+
+function claimDaily() {
+  const today = getTodayUTC();
+  if(STATE.daily.lastClaim === today) {
+    showToast('⏳ Already claimed today! Resets at UTC 00:00','red');
+    return;
+  }
+  // AdsGram to unlock Daily Rewards
+  triggerAdsGramAd(() => {
+    const dayIdx = getStreakDay();
+    const reward = DAILY_AMOUNTS[dayIdx];
+    STATE.balance.coins += reward;
+    STATE.daily.claimed.push(dayIdx);
+    STATE.daily.lastClaim = today;
+    STATE.daily.currentStreak = (STATE.daily.currentStreak + 1) % 7;
+    if(STATE.daily.claimed.length >= 7) STATE.daily.claimed = [];
+    updateBalanceDisplay();
+    saveState();
+    renderDailyGrid();
+    showToast('🎁 Day '+(dayIdx+1)+' reward: +'+reward+' 🪙','gold');
+  });
+}
+
+// =============================================
+// GAME ENGINE (Fixed Multi-loop & Memory Leak)
+// =============================================
+const GAME_CANVAS_W = 360, GAME_CANVAS_H = 380;
+let gameCtx = null;
+let gameBubbles = [];
+let gameScore = 0;
+let gameLevel = 1;
+
+function initGameCanvas() {
+  const canvas = document.getElementById('gameCanvas');
+  canvas.width = GAME_CANVAS_W; canvas.height = GAME_CANVAS_H;
+  gameCtx = canvas.getContext('2d');
+  
+  // Clear previous listeners to avoid overlapping clicks
+  canvas.replaceWith(canvas.cloneNode(true));
+  const newCanvas = document.getElementById('gameCanvas');
+  gameCtx = newCanvas.getContext('2d');
+  
+  newCanvas.addEventListener('click', handleGameClick);
+  drawGameIdle();
+}
+
+function drawGameIdle() {
+  if(!gameCtx) return;
+  gameCtx.fillStyle = '#060612';
+  gameCtx.fillRect(0,0,GAME_CANVAS_W,GAME_CANVAS_H);
+}
+
+function getLevelConfig(level) {
+  return {
+    count: Math.min(5 + level*2, 30),
+    speed: Math.min(0.5 + level*0.15, 4),
+    minR: Math.max(40 - level*1.5, 15),
+    maxR: Math.max(55 - level*1, 25),
+  };
+}
+function getLevelReward(level) { return 10 + (level-1)*5; }
+
+function createBubble(cfg) {
+  const r = cfg.minR + Math.random()*(cfg.maxR-cfg.minR);
+  return {
+    x: r + Math.random()*(GAME_CANVAS_W - 2*r),
+    y: GAME_CANVAS_H + r, r, vx: (Math.random()-0.5)*0.8,
+    vy: -(cfg.speed * (0.7 + Math.random()*0.6)),
+    color: ['#00C6FF','#9B59B6','#FFD700','#00E676','#FF6B6B'][Math.floor(Math.random()*5)],
+    popped: false, wobble: Math.random()*Math.PI*2, wobbleSpeed: 0.03
+  };
+}
+
+function startGame() {
+  // Game gate validation with Monetag Ad
+  triggerMonetagAd(() => {
+    document.getElementById('gameOverlay').style.display='none';
+    document.getElementById('pauseBtn').style.display='block';
+    document.getElementById('restartBtn').style.display='block';
+    gameLevel = 1; gameScore = 0;
+    STATE.game.running = true;
+    STATE.game.paused = false;
+    initLevel();
+    updateGameUI();
+    
+    cancelAnimationFrame(STATE.game.animFrame);
+    gameLoop();
+  });
+}
+
+function initLevel() {
+  const cfg = getLevelConfig(gameLevel);
+  gameBubbles = [];
+  for(let i=0; i<cfg.count; i++) {
+    setTimeout(() => {
+      if(STATE.game.running) gameBubbles.push(createBubble(cfg));
+    }, i * 250);
+  }
+}
+
+function handleGameClick(e) {
+  if(!STATE.game.running || STATE.game.paused) return;
+  const rect = e.target.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (GAME_CANVAS_W / rect.width);
+  const y = (e.clientY - rect.top) * (GAME_CANVAS_H / rect.height);
+  
+  for(let i=gameBubbles.length-1; i>=0; i--) {
+    const b = gameBubbles[i];
+    if(b.popped) continue;
+    const dx=b.x-x, dy=b.y-y;
+    if(dx*dx+dy*dy <= b.r*b.r) {
+      b.popped = true;
+      gameScore++;
+      document.getElementById('gameScore').textContent = gameScore;
+      checkLevelComplete();
+      return;
+    }
+  }
+}
+
+function checkLevelComplete() {
+  const finished = gameBubbles.every(b => b.popped || b.y < -b.r);
+  if(gameBubbles.length > 0 && finished) {
+    STATE.game.running = false;
+    const reward = getLevelReward(gameLevel);
+    STATE.balance.coins += reward;
+    if(gameScore > STATE.game.highScore) STATE.game.highScore = gameScore;
+    updateBalanceDisplay(); saveState();
+    showToast('🎉 Level Complete! +'+reward+' 🪙','gold');
+    
+    setTimeout(() => {
+      gameLevel++;
+      STATE.game.running = true;
+      initLevel();
+      updateGameUI();
+      gameLoop();
+    }, 1500);
+  }
+}
+
+function gameLoop() {
+  if(!STATE.game.running || STATE.game.paused) return; // Prevent loop stack leak
+
+  gameCtx.fillStyle = '#060612';
+  gameCtx.fillRect(0,0,GAME_CANVAS_W,GAME_CANVAS_H);
+
+  gameBubbles.forEach(b => {
+    if(b.popped) return;
+    b.x += b.vx + Math.sin(b.wobble)*0.3;
+    b.y += b.vy;
+    b.wobble += b.wobbleSpeed;
+
+    if(b.x < b.r || b.x > GAME_CANVAS_W-b.r) b.vx *= -1;
+
+    gameCtx.beginPath(); gameCtx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    gameCtx.fillStyle = b.color+'CC'; gameCtx.fill();
+    gameCtx.strokeStyle = b.color; gameCtx.lineWidth = 2; gameCtx.stroke();
+  });
+
+  const allOut = gameBubbles.length > 0 && gameBubbles.every(b => b.popped || b.y < -b.r);
+  if(allOut) checkLevelComplete();
+
+  STATE.game.animFrame = requestAnimationFrame(gameLoop);
+}
+
+function togglePause() {
+  STATE.game.paused = !STATE.game.paused;
+  document.getElementById('pauseBtn').textContent = STATE.game.paused ? '▶ Resume' : '⏸ Pause';
+  if(!STATE.game.paused) gameLoop();
+}
+
+function updateGameUI() {
+  document.getElementById('gameLvl').textContent = gameLevel;
+  document.getElementById('gameReward').textContent = '+'+getLevelReward(gameLevel)+'🪙';
+  document.getElementById('gameHigh').textContent = STATE.game.highScore;
+}
+
+function renderLevelRewards() {
+  let html='';
+  for(let i=1;i<=9;i++) {
+    html += `<div class="game-stat"><div class="game-stat-val">+${getLevelReward(i)}🪙</div><div class="game-stat-label">Level ${i}</div></div>`;
+  }
+  document.getElementById('levelRewards').innerHTML = html;
+}
+
+// =============================================
+// TASKS ENGINE (Fixed event context bugs)
+// =============================================
+function switchTaskTab(event, tab) {
+  document.querySelectorAll('.task-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.task-panel').forEach(p=>p.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('taskPanel-'+tab).classList.add('active');
+}
+
+function renderTasks() {
+  // AdsGram Panel Setup
+  document.getElementById('adsgramTasks').innerHTML = STATE.tasks.adsgram.map(t=>`
+    <div class="task-card card card-glow-blue">
+      <div class="task-top">
+        <div class="task-name">📺 Task #${t.id} — Watch ${t.target} AdsGram Ads</div>
+        <div class="task-reward">+${t.reward} 💎</div>
+      </div>
+      <div class="task-progress-text"><span>Progress</span><span>${t.progress} / ${t.target}</span></div>
+      <div class="task-bar-wrap"><div class="task-bar-fill" style="width:${(t.progress/t.target*100)}%"></div></div>
+      ${t.claimed ? `<button class="task-action-btn task-done-btn">✅ Completed</button>` : 
+        t.progress >= t.target ? `<button class="task-action-btn task-claim-btn-active" onclick="claimTask('adsgram',${t.id-1})">🎁 Claim ${t.reward} Tickets</button>` : 
+        `<button class="task-action-btn task-watch-btn" onclick="watchAdsgramTask(${t.id-1})">📺 Watch Ad (+1 Progress)</button>`}
+    </div>
+  `).join('');
+
+  // Monetag Panel Setup
+  document.getElementById('monetagTasks').innerHTML = STATE.tasks.monetag.map(t=>`
+    <div class="task-card card card-glow-purple">
+      <div class="task-top">
+        <div class="task-name">📱 Task #${t.id} — Watch ${t.target} Monetag Ads</div>
+        <div class="task-reward">+${t.reward} 💎</div>
+      </div>
+      <div class="task-progress-text"><span>Progress</span><span>${t.progress} / ${t.target}</span></div>
+      <div class="task-bar-wrap"><div class="task-bar-fill" style="width:${(t.progress/t.target*100)}%; background:var(--purple)"></div></div>
+      ${t.claimed ? `<button class="task-action-btn task-done-btn">✅ Completed</button>` : 
+        t.progress >= t.target ? `<button class="task-action-btn task-claim-btn-active" onclick="claimTask('monetag',${t.id-1})">🎁 Claim ${t.reward} Tickets</button>` : 
+        `<button class="task-action-btn task-watch-btn" onclick="watchMonetagTask(${t.id-1})">📱 Watch Ad (+1 Progress)</button>`}
+    </div>
+  `).join('');
+}
+
+function watchAdsgramTask(idx) {
+  triggerAdsGramAd(() => {
+    STATE.tasks.adsgram[idx].progress = Math.min(STATE.tasks.adsgram[idx].progress+1, STATE.tasks.adsgram[idx].target);
+    saveState(); renderTasks();
+    showToast('📺 AdsGram Progress Updated!','blue');
+  });
+}
+
+function watchMonetagTask(idx) {
+  triggerMonetagAd(() => {
+    STATE.tasks.monetag[idx].progress = Math.min(STATE.tasks.monetag[idx].progress+1, STATE.tasks.monetag[idx].target);
+    saveState(); renderTasks();
+    showToast('📱 Monetag Progress Updated!','purple');
+  });
+}
+
+function claimTask(type, idx) {
+  const task = STATE.tasks[type][idx];
+  if(task.claimed || task.progress < task.target) return;
+  // Final ad wrapper to claim structural tickets
+  triggerAdsGramAd(() => {
+    task.claimed = true;
+    STATE.balance.tickets += task.reward;
+    updateBalanceDisplay(); saveState(); renderTasks();
+    showToast('💎 Reward Claimed Successfully!','blue');
+  });
+}
+
+function watchExtraAd() {
+  const rewards = [
+    {label:'2 Coins', type:'coins', val:2, prob:0.5},
+    {label:'5 Coins', type:'coins', val:5, prob:0.3},
+    {label:'10 Coins', type:'coins', val:10, prob:0.15},
+    {label:'1 Ticket', type:'tickets', val:1, prob:0.05}
+  ];
+  
+  triggerAdsGramAd(() => {
+    let r = Math.random(), cumul=0, chosen=rewards[0];
+    for(const rw of rewards) {
+      cumul += rw.prob;
+      if(r <= cumul) { chosen = rw; break; }
+    }
+    
+    if(chosen.type === 'coins') STATE.balance.coins += chosen.val;
+    else STATE.balance.tickets += chosen.val;
+
+    STATE.extraAdHistory.unshift({label:chosen.label, time:new Date().toLocaleTimeString()});
+    if(STATE.extraAdHistory.length>6) STATE.extraAdHistory.pop();
+    
+    updateBalanceDisplay(); saveState(); renderExtraHistory();
+    showToast('🎰 Won: ' + chosen.label, 'gold');
+  });
+}
+
+function renderExtraHistory() {
+  const container = document.getElementById('extraAdHistory');
+  if(!STATE.extraAdHistory.length) { container.innerHTML=''; return; }
+  container.innerHTML = '<div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;">RECENT REWARDS</div>' +
+    STATE.extraAdHistory.map(h=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;"><span>🎰 ${h.label}</span><span style="color:var(--text2)">${h.time}</span></div>`).join('');
+}
+
+// =============================================
+// WALLET MANAGEMENT
+// =============================================
+function renderWithdrawOptions() {
+  document.getElementById('withdrawGrid').innerHTML = WITHDRAW_OPTIONS.map((opt,i)=>`
+    <div class="withdraw-option ${STATE.wallet.selectedWithdraw===i?'selected':''}" onclick="selectWithdraw(${i})">
+      <div class="withdraw-amount">${opt.coins} 🪙</div>
+      <div class="withdraw-diamond">${opt.diamonds.toLocaleString()} ♦️</div>
+    </div>
+  `).join('');
+}
+
+function selectWithdraw(idx) {
+  STATE.wallet.selectedWithdraw = idx;
+  renderWithdrawOptions();
+  const opt = WITHDRAW_OPTIONS[idx];
+  document.getElementById('withdrawDetail').style.display='block';
+  document.getElementById('wdAmount').textContent = opt.coins;
+  document.getElementById('wdDiamonds').textContent = opt.diamonds;
+  document.getElementById('wdReceive').textContent = opt.receive + ' TON';
+  updateWithdrawBtn();
+}
+
+function connectWallet() {
+  if(!STATE.wallet.connected) {
+    STATE.wallet.connected = true;
+    STATE.wallet.address = 'EQB...'+Math.random().toString(36).substr(2,6).toUpperCase();
+    document.getElementById('walletConnectBtn').classList.add('connected');
+    document.getElementById('walletBtnText').textContent = 'Connected: '+STATE.wallet.address;
+    showToast('✅ TON Wallet Hooked!','green');
+  } else {
+    STATE.wallet.connected = false;
+    document.getElementById('walletConnectBtn').classList.remove('connected');
+    document.getElementById('walletBtnText').textContent = 'Connect TON Wallet';
+  }
+  updateWithdrawBtn(); saveState();
+}
+
+function updateWithdrawBtn() {
+  document.getElementById('withdrawSubmitBtn').disabled = !(STATE.wallet.connected && STATE.wallet.selectedWithdraw !== null);
+}
+
+function submitWithdraw() {
+  const opt = WITHDRAW_OPTIONS[STATE.wallet.selectedWithdraw];
+  if(STATE.balance.coins < opt.coinVal || STATE.balance.diamonds < opt.diamonds) {
+    showToast('⚠️ Insufficient assets.','red'); return;
+  }
+  STATE.balance.coins -= opt.coinVal;
+  STATE.balance.diamonds -= opt.diamonds;
+  STATE.txHistory.unshift({date: new Date().toLocaleDateString(), amount: opt.receive+' TON', address: STATE.wallet.address, status: 'pending'});
+  
+  STATE.wallet.selectedWithdraw = null;
+  document.getElementById('withdrawDetail').style.display='none';
+  updateBalanceDisplay(); saveState(); renderWithdrawOptions(); renderTxHistory(); updateWithdrawBtn();
+  showToast('📤 Request Sent for Audit!','gold');
+}
+
+function renderTxHistory() {
+  const container = document.getElementById('txHistory');
+  if(!STATE.txHistory.length) { container.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2);font-size:12px;">No transactions yet</div>'; return; }
+  container.innerHTML = STATE.txHistory.map(tx=>`<div class="card tx-item"><div><div class="tx-date">${tx.date}</div><div class="tx-addr">${tx.address}</div></div><div class="tx-right"><div class="tx-amount">${tx.amount}</div><span class="tx-status tx-pending">${tx.status.toUpperCase()}</span></div></div>`).join('');
+}
+
+// =============================================
+// NAV ROUTING
+// =============================================
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nav-'+page).classList.add('active');
+  
+  // Stop auto spin if user navigates away to prevent background ad breaks
+  if (page !== 'home' && STATE.spin.autoRunning) {
+    stopAutoSpin();
+  }
+
+  if(page==='wallet') { renderWithdrawOptions(); renderTxHistory(); }
+  if(page==='game') { initGameCanvas(); renderLevelRewards(); updateGameUI(); }
+  if(page==='tasks') { renderTasks(); renderExtraHistory(); }
+}
+
+function init() {
+  loadState(); initTelegram(); updateBalanceDisplay();
+  drawWheel('spinCanvas', spinRotation); drawWheel('autoSpinCanvas', autoSpinRotation);
+  renderDailyGrid(); checkAutoSpinReset(); updateAutoSpinDisplay();
+  setInterval(updateAutoResetTimer, 1000);
+  setInterval(()=>{ if(!spinAnimating) drawWheel('spinCanvas', spinRotation); }, 200);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
