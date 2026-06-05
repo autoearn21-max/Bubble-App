@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bubble Reward</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icon CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Canvas Confetti for Celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Adsgram SDK (Loaded asynchronously) -->
+    <script src="https://adsgram.co/sdk/v1/adsgram-sdk.js" defer></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0F0C20',
+                        cardBg: '#1D183A',
+                        accentPurp: '#7C3AED',
+                        accentPink: '#EC4899',
+                        accentCyan: '#06B6D4',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', 'Hind Siliguri', sans-serif;
+            background-color: #0F0C20;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        /* Hide scrollbars for app-like feeling */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Glowing Effects */
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(124, 58, 237, 0.5);
+        }
+        .neon-text {
+            text-shadow: 0 0 8px rgba(236, 72, 153, 0.6);
+        }
+        
+        /* Navigation Active State Animation */
+        .nav-active {
+            color: #06B6D4;
+            transform: translateY(-4px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen flex flex-col justify-between overflow-hidden">
+
+    <!-- TOP HEADER BAR -->
+    <header class="bg-cardBg/80 backdrop-blur-md px-4 py-3 border-b border-purple-900/40 flex justify-between items-center sticky top-0 z-40">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-accentPurp to-accentPink flex items-center justify-center neon-glow">
+                <i class="fa-solid fa-gamepad text-xs"></i>
+            </div>
+            <span class="font-bold tracking-wide text-sm text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Bubble Reward</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1 bg-darkBg/60 px-2.5 py-1 rounded-full border border-yellow-500/30">
+                <span class="text-sm">🪙</span>
+                <span id="header-coins" class="text-xs font-bold text-yellow-400">0</span>
+            </div>
+            <div class="flex items-center gap-1 bg-darkBg/60 px-2.5 py-1 rounded-full border border-cyan-500/30">
+                <span class="text-sm">💎</span>
+                <span id="header-tickets" class="text-xs font-bold text-cyan-400">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN VIEWS CONTAINER -->
+    <main class="flex-1 overflow-y-auto pb-24 px-4 pt-4 relative">
+        
+        <!-- 🏠 HOME PAGE -->
+        <section id="view-home" class="view-panel space-y-6">
+            <!-- Spin Title -->
+            <div class="text-center">
+                <h1 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">স্পিন হুইল ও দৈনিক বোনাস</h1>
+                <p class="text-gray-400 text-xs mt-1">ভাগ্য পরীক্ষা করুন এবং কয়েন আর্ন করুন</p>
+            </div>
+
+            <!-- Spin Toggle Mode -->
+            <div class="flex justify-center">
+                <div class="bg-cardBg p-1 rounded-xl flex gap-1 border border-purple-950">
+                    <button id="btn-mode-manual" onclick="switchSpinMode('manual')" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-accentPurp text-white transition-all">Manual Spin</button>
+                    <button id="btn-mode-auto" onclick="switchSpinMode('auto')" class="px-4 py-1.5 rounded-lg text-xs font-bold text-gray-400 transition-all">Auto Spin</button>
+                </div>
+            </div>
+
+            <!-- Canvas Wheel Section -->
+            <div class="flex flex-col items-center justify-center py-4 relative">
+                <!-- Pointer -->
+                <div class="absolute -top-1 z-10 text-yellow-500 drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
+                    <i class="fa-solid fa-caret-down text-4xl"></i>
+                </div>
+                
+                <div class="relative p-2 rounded-full border-4 border-accentPurp/30 bg-cardBg neon-glow">
+                    <canvas id="wheel-canvas" width="280" height="280" class="rounded-full transition-transform duration-100"></canvas>
+                    <div class="absolute inset-0 m-auto w-12 h-12 bg-darkBg rounded-full border-4 border-pink-500 flex items-center justify-center shadow-lg">
+                        <div class="w-4 h-4 rounded-full bg-accentCyan animate-ping"></div>
+                    </div>
+                </div>
+
+                <!-- Manual Controls -->
+                <div id="control-manual" class="mt-6 w-full max-w-xs text-center">
+                    <button id="btn-spin-manual" onclick="handleManualSpin()" class="w-full bg-gradient-to-r from-accentPurp to-accentPink hover:opacity-90 active:scale-95 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all shadow-lg neon-glow">
+                        <i class="fa-solid fa-play mr-1"></i> Spin Wheel
+                    </button>
+                    <p id="spin-status-text" class="text-xs text-gray-400 mt-2">প্রথম স্পিন একদম ফ্রি! পরবর্তী স্পিনগুলোর জন্য বিজ্ঞাপন দেখতে হবে।</p>
+                </div>
+
+                <!-- Auto Controls -->
+                <div id="control-auto" class="mt-6 w-full max-w-xs hidden flex gap-3">
+                    <button id="btn-spin-auto-start" onclick="startAutoSpinLoop()" class="flex-1 bg-green-600 hover:bg-green-700 active:scale-95 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all shadow-lg">
+                        <i class="fa-solid fa-rotate mr-1"></i> Start
+                    </button>
+                    <button id="btn-spin-auto-stop" onclick="stopAutoSpinLoop()" class="flex-1 bg-red-600 hover:bg-red-700 active:scale-95 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all shadow-lg" disabled>
+                        <i class="fa-solid fa-square mr-1"></i> Stop
+                    </button>
+                </div>
+                <!-- Auto Spin Limit Tracker -->
+                <div id="auto-spin-limit-container" class="mt-2 text-center hidden">
+                    <p class="text-xs text-purple-300">অটো স্পিন লিমিট: <span id="auto-spin-count">0</span> / 100 (প্রতি ২৮ ঘণ্টায়)</p>
+                </div>
+            </div>
+
+            <!-- Daily Check-in Grid -->
+            <div class="bg-cardBg rounded-2xl p-4 border border-purple-900/30">
+                <h3 class="text-sm font-bold text-pink-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-days"></i> দৈনিক রিওয়ার্ড (Daily Reward)
+                </h3>
+                <div class="grid grid-cols-4 gap-2 mb-4">
+                    <!-- Day 1 to 7 Cards generated by JS -->
+                    <div id="daily-grid" class="contents"></div>
+                </div>
+                <button id="btn-claim-daily" onclick="claimDailyReward()" class="w-full bg-slate-800 text-slate-400 py-2.5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-1 cursor-not-allowed" disabled>
+                    <i class="fa-solid fa-lock text-[10px]"></i> Claim Daily Reward
+                </button>
+                <p id="daily-status-time" class="text-[10px] text-gray-400 text-center mt-2">প্রতিদিন UTC 00:00 টায় বোনাস রিসেট হবে।</p>
+            </div>
+        </section>
+
+        <!-- 🎮 GAME PAGE -->
+        <section id="view-game" class="view-panel space-y-4 hidden">
+            <div class="text-center">
+                <h1 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-cyan-400">Bubble Pop Game</h1>
+                <p class="text-gray-400 text-xs mt-1">লেভেল পার করুন এবং কয়েন ও টিকিট জিতুন!</p>
+            </div>
+
+            <!-- Game Dashboard/Start Area -->
+            <div id="game-lobby" class="bg-cardBg rounded-2xl p-6 border border-purple-900/30 text-center space-y-4">
+                <div class="w-20 h-20 bg-gradient-to-tr from-cyan-400 to-purple-600 rounded-full mx-auto flex items-center justify-center animate-bounce">
+                    <i class="fa-solid fa-circle-dot text-4xl text-white"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold">বর্তমান লেভেল: <span id="lobby-level" class="text-accentCyan">Level 1</span></h2>
+                    <p class="text-xs text-gray-400 mt-1">গেমের লেভেল শুরু বা রিস্টার্ট করতে রিওয়ার্ডেড বিজ্ঞাপন দেখতে হবে।</p>
+                </div>
+                <button onclick="startGameWithAd()" class="w-full bg-accentCyan hover:bg-cyan-500 text-slate-900 py-3 rounded-xl font-extrabold text-sm uppercase tracking-wide transition-all shadow-lg shadow-cyan-500/20">
+                    <i class="fa-solid fa-video mr-1"></i> Watch Ad & Play
+                </button>
+            </div>
+
+            <!-- Real HTML5 Canvas Game screen (Hidden by default) -->
+            <div id="game-arena" class="hidden space-y-3">
+                <div class="flex justify-between items-center bg-cardBg px-3 py-2 rounded-xl border border-purple-900/30 text-xs">
+                    <div>Level: <span id="game-level-indicator" class="font-bold text-accentCyan">1</span></div>
+                    <div>Score: <span id="game-score" class="font-bold text-yellow-400">0 / 15</span></div>
+                    <div>Time: <span id="game-timer" class="font-bold text-pink-500">30s</span></div>
+                </div>
+                <div class="relative w-full aspect-[4/5] bg-slate-950 rounded-2xl border-2 border-purple-800 overflow-hidden">
+                    <canvas id="game-canvas" class="w-full h-full block"></canvas>
+                </div>
+                <div class="text-center">
+                    <button onclick="exitGame()" class="px-4 py-1.5 bg-slate-800 text-gray-400 rounded-lg text-xs hover:bg-slate-700">
+                        <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Exit Game
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 📋 TASKS PAGE -->
+        <section id="view-tasks" class="view-panel space-y-6 hidden">
+            <div class="text-center">
+                <h1 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">রিওয়ার্ড টাস্কস</h1>
+                <p class="text-gray-400 text-xs mt-1">বিজ্ঞাপন দেখে ফ্রিতে টিকিটের পরিমান বাড়িয়ে নিন</p>
+            </div>
+
+            <!-- Tab Switch for Task Provider -->
+            <div class="flex bg-cardBg p-1 rounded-xl border border-purple-950">
+                <button id="btn-task-tab-1" onclick="switchTaskTab(1)" class="flex-1 text-center py-2 rounded-lg text-xs font-bold bg-accentPurp transition-all">Adsgram Tasks</button>
+                <button id="btn-task-tab-2" onclick="switchTaskTab(2)" class="flex-1 text-center py-2 rounded-lg text-xs font-bold text-gray-400 transition-all">Monetag Tasks</button>
+            </div>
+
+            <!-- Task List 1: Adsgram -->
+            <div id="task-container-1" class="space-y-3">
+                <div class="bg-indigo-950/40 p-3 rounded-xl border border-indigo-500/20">
+                    <p class="text-xs text-indigo-300 leading-relaxed"><i class="fa-solid fa-circle-info mr-1"></i> টিকিট (Tickets) আর্ন করার জন্য আপনাকে নিচের টাস্কগুলো পূরণ করতে হবে। প্রতিটি টাস্কে ২৫টি করে বিজ্ঞাপন দেখতে হবে।</p>
+                </div>
+                <div id="adsgram-tasks-list" class="space-y-2">
+                    <!-- Generated via JS -->
+                </div>
+            </div>
+
+            <!-- Task List 2: Monetag -->
+            <div id="task-container-2" class="space-y-3 hidden">
+                <div class="bg-cyan-950/40 p-3 rounded-xl border border-cyan-500/20">
+                    <p class="text-xs text-cyan-300 leading-relaxed"><i class="fa-solid fa-circle-info mr-1"></i> টিকিট (Tickets) আর্ন করার জন্য আপনাকে নিচের টাস্কগুলো পূরণ করতে হবে। প্রতিটি টাস্কে ৫০টি করে বিজ্ঞাপন দেখতে হবে।</p>
+                </div>
+                <div id="monetag-tasks-list" class="space-y-2">
+                    <!-- Generated via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 💳 WALLET PAGE -->
+        <section id="view-wallet" class="view-panel space-y-6 hidden">
+            <div class="text-center">
+                <h1 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-indigo-400">আমার ওয়ালেট</h1>
+                <p class="text-gray-400 text-xs mt-1">আয়কৃত কয়েন সরাসরি ওয়ালেটে উইথড্র করুন</p>
+            </div>
+
+            <!-- Balances Card -->
+            <div class="bg-gradient-to-br from-indigo-950 to-purple-900 rounded-2xl p-5 border border-purple-500/30 relative overflow-hidden">
+                <div class="absolute right-[-20px] bottom-[-20px] opacity-10 text-9xl">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-xs text-purple-300">মোট কয়েন ব্যালেন্স</p>
+                        <h2 id="wallet-coins" class="text-2xl font-black text-yellow-400 tracking-wide mt-1">0 🪙</h2>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-purple-300">মোট টিকিট ব্যালেন্স</p>
+                        <h2 id="wallet-tickets" class="text-2xl font-black text-cyan-400 tracking-wide mt-1">0 💎</h2>
+                    </div>
+                </div>
+
+                <!-- Web3 Wallet Connection Container -->
+                <div class="mt-5 pt-4 border-t border-purple-800/50 flex flex-col gap-2">
+                    <button id="btn-wallet-connect" onclick="toggleWalletConnection()" class="w-full bg-accentPurp hover:bg-purple-600 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-link"></i> <span id="wallet-connect-text">Connect Crypto Wallet</span>
+                    </button>
+                    <p id="wallet-address-display" class="text-[10px] text-gray-400 text-center hidden break-all"></p>
+                </div>
+            </div>
+
+            <!-- Withdrawal Form Section -->
+            <div class="bg-cardBg rounded-2xl p-5 border border-purple-900/30 space-y-4">
+                <h3 class="text-sm font-bold text-purple-300"><i class="fa-solid fa-money-bill-transfer mr-1"></i> আয়ের টাকা উত্তোলন</h3>
+                
+                <!-- Range Selector -->
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2">উইথড্রয়াল প্যাকেজ নির্বাচন করুন:</label>
+                    <select id="withdraw-package-select" onchange="updateWithdrawDetails()" class="w-full bg-darkBg text-white border border-purple-900/60 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-500">
+                        <option value="2">2,000,000 (2M) Coins 🪙</option>
+                        <option value="5">5,000,000 (5M) Coins 🪙</option>
+                        <option value="10">10,000,000 (10M) Coins 🪙</option>
+                    </select>
+                </div>
+
+                <!-- Detail Panel -->
+                <div class="bg-darkBg/60 rounded-xl p-3 text-xs space-y-2 border border-purple-950">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">উইথড্র অ্যামাউন্ট:</span>
+                        <span id="detail-coins" class="font-bold text-yellow-400">2,000,000 🪙</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">প্রয়োজনীয় টিকিট:</span>
+                        <span id="detail-tickets-needed" class="font-bold text-cyan-400">2,000 💎</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">নেটওয়ার্ক ফি:</span>
+                        <span class="text-purple-400">0.05 💎</span>
+                    </div>
+                    <div class="flex justify-between pt-2 border-t border-purple-950">
+                        <span class="text-gray-300 font-semibold">মোট প্রাপ্তি (Receive):</span>
+                        <span id="detail-will-receive" class="font-bold text-green-400">0.15 TON / 💎</span>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button id="btn-withdraw-submit" onclick="submitWithdrawal()" class="w-full bg-gray-700 text-gray-400 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-not-allowed" disabled>
+                    <i class="fa-solid fa-circle-check mr-1"></i> Submit Withdrawal Request
+                </button>
+            </div>
+
+            <!-- Payment History Section -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">পেমেন্ট হিস্ট্রি (Payment History)</h3>
+                <div id="payment-history-container" class="bg-cardBg rounded-xl p-4 border border-purple-900/20 text-center text-xs text-gray-500">
+                    <!-- History list or Empty State inside JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 📌 PERSISTENT BOTTOM NAVIGATION BAR -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-cardBg/90 backdrop-blur-lg border-t border-purple-900/40 px-6 py-2 flex justify-between items-center z-40 max-w-md mx-auto rounded-t-2xl shadow-xl">
+        <button onclick="switchView('home')" id="nav-home" class="flex flex-col items-center gap-1 text-gray-400 transition-all flex-1 py-1">
+            <i class="fa-solid fa-house text-lg"></i>
+            <span class="text-[10px] font-semibold">Home</span>
+        </button>
+        <button onclick="switchView('game')" id="nav-game" class="flex flex-col items-center gap-1 text-gray-400 transition-all flex-1 py-1">
+            <i class="fa-solid fa-gamepad text-lg"></i>
+            <span class="text-[10px] font-semibold">Game</span>
+        </button>
+        <button onclick="switchView('tasks')" id="nav-tasks" class="flex flex-col items-center gap-1 text-gray-400 transition-all flex-1 py-1">
+            <i class="fa-solid fa-list-check text-lg"></i>
+            <span class="text-[10px] font-semibold">Tasks</span>
+        </button>
+        <button onclick="switchView('wallet')" id="nav-wallet" class="flex flex-col items-center gap-1 text-gray-400 transition-all flex-1 py-1">
+            <i class="fa-solid fa-wallet text-lg"></i>
+            <span class="text-[10px] font-semibold">Wallet</span>
+        </button>
+    </nav>
+
+    <!-- 📺 AD REWARD COUNTDOWN SIMULATOR MODAL (Fallback when ad script block id not active) -->
+    <div id="ad-simulator" class="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 hidden">
+        <div class="text-center space-y-6 max-w-xs">
+            <!-- Loader Spinner -->
+            <div class="relative w-24 h-24 mx-auto">
+                <div class="absolute inset-0 rounded-full border-4 border-slate-800"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-t-pink-500 border-r-cyan-500 animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span id="ad-timer-text" class="text-xl font-bold text-white">5s</span>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold">স্পন্সরড রিওয়ার্ডেড অ্যাড</h3>
+                <p id="ad-simulator-desc" class="text-xs text-gray-400 mt-2">বিজ্ঞাপনটি সম্পূর্ণ দেখুন। স্কিপ বা ক্লোজ করলে রিওয়ার্ড পাবেন না।</p>
+            </div>
+            <div class="bg-cardBg/60 p-3 rounded-lg border border-purple-900/40 text-left text-[11px] text-gray-400">
+                <p class="font-bold text-pink-500 mb-1">Developer Notice:</p>
+                <p>এটি সিমুলেশন মুড। Adsgram Block ID কনফিগার করলে এখানে রিয়েল অ্যাড প্লে হবে।</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎁 CLAIM REWARD POPUP MODAL -->
+    <div id="claim-popup" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-cardBg border-2 border-pink-500/50 rounded-3xl p-6 w-full max-w-xs text-center space-y-5 animate-scaleUp">
+            <div class="w-16 h-16 bg-yellow-400/10 rounded-full flex items-center justify-center mx-auto text-yellow-400 text-3xl animate-bounce">
+                🪙
+            </div>
+            <div>
+                <h3 class="text-lg font-bold">অভিনন্দন! 🎉</h3>
+                <p class="text-xs text-gray-400 mt-1">আপনি রিওয়ার্ড দাবি করার যোগ্য হয়েছেন।</p>
+                <div class="mt-3 bg-darkBg/60 py-2.5 rounded-xl border border-purple-900/40">
+                    <span id="popup-reward-text" class="text-xl font-black text-yellow-400">+50 Coins</span>
+                </div>
+            </div>
+            <button id="btn-popup-claim" class="w-full bg-gradient-to-r from-accentPurp to-accentPink py-3 rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-lg shadow-pink-500/10">
+                <i class="fa-solid fa-video mr-1"></i> Watch Ad to Claim
+            </button>
+        </div>
+    </div>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!-- JAVASCRIPT LOGIC SECTION -->
+    <script>
+        // 1. STATE & LOCAL STORAGE CONFIG
+        const STATE_KEY = "bubble_reward_user_state";
+        let state = {
+            coins: 1000,
+            tickets: 200, // Initial tickets
+            currentDay: 1,
+            lastDailyClaimTime: null,
+            spinsToday: 0,
+            lastSpinResetTime: null,
+            adsgramProgress: [0, 0, 0, 0, 0], // Progress for 5 tasks (0 to 24)
+            monetagProgress: [0, 0, 0, 0, 0], // Progress for 5 tasks (0 to 49)
+            completedAdsgramTasks: [false, false, false, false, false],
+            completedMonetagTasks: [false, false, false, false, false],
+            paymentHistory: [],
+            currentLevel: 1
+        };
+
+        // Network Block IDs for integration (User should customize these variables)
+        const ADSGRAM_BLOCK_ID = "YOUR_ADSGRAM_BLOCK_ID"; 
+        const MONETAG_ZONE_ID = "YOUR_MONETAG_ZONE_ID";
+
+        // Load persisted state
+        if (localStorage.getItem(STATE_KEY)) {
+            try {
+                state = { ...state, ...JSON.parse(localStorage.getItem(STATE_KEY)) };
+            } catch (e) {
+                console.error("Error loading state", e);
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem(STATE_KEY, JSON.stringify(state));
+            updateHeaderBalances();
+        }
+
+        // Initialize Telegram WebApp SDK
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.expand();
+            tg.ready();
+        }
+
+        // 2. VIEW SWITCHER
+        function switchView(viewId) {
+            document.querySelectorAll('.view-panel').forEach(panel => panel.classList.add('hidden'));
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('nav-active'));
+            document.getElementById(`nav-${viewId}`).classList.add('nav-active');
+            
+            if (viewId === 'home') {
+                drawWheel();
+                checkDailyRewardStatus();
+            } else if (viewId === 'wallet') {
+                updateWalletUI();
+            }
+        }
+
+        // 3. HEADER BALANCES
+        function updateHeaderBalances() {
+            document.getElementById('header-coins').innerText = Math.floor(state.coins).toLocaleString();
+            document.getElementById('header-tickets').innerText = Math.floor(state.tickets).toLocaleString();
+        }
+
+        // 4. AD CONTROLLER (With real logic + beautiful simulator callback fallback)
+        function triggerRewardedAd(type, successCallback) {
+            // Check if real Adsgram block ID is available
+            if (type === 'adsgram' && typeof window.Adsgram !== 'undefined' && ADSGRAM_BLOCK_ID !== "YOUR_ADSGRAM_BLOCK_ID") {
+                const AdController = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID });
+                AdController.show().then((result) => {
+                    // Ad played completely
+                    successCallback();
+                }).catch((result) => {
+                    console.error("Adsgram play issue:", result);
+                    alert("বিজ্ঞাপন লোড হতে ব্যর্থ হয়েছে! অনুগ্রহ করে আবার চেষ্টা করুন।");
+                });
+            } else {
+                // FALLBACK: Interactive Ad Simulator
+                const adModal = document.getElementById('ad-simulator');
+                const adTimerText = document.getElementById('ad-timer-text');
+                const adDesc = document.getElementById('ad-simulator-desc');
+                
+                adDesc.innerText = `একটি ${type === 'adsgram' ? 'Adsgram' : 'Monetag'} স্পন্সরড ভিডিও বিজ্ঞাপন প্লে হচ্ছে...`;
+                adModal.classList.remove('hidden');
+                
+                let count = 5;
+                adTimerText.innerText = `${count}s`;
+                
+                const interval = setInterval(() => {
+                    count--;
+                    adTimerText.innerText = `${count}s`;
+                    if (count <= 0) {
+                        clearInterval(interval);
+                        adModal.classList.add('hidden');
+                        // Successful ad callback
+                        successCallback();
+                    }
+                }, 1000);
+            }
+        }
+
+        // 5. MANUAL & AUTO SPIN SYSTEM
+        let currentSpinMode = 'manual';
+        const canvas = document.getElementById('wheel-canvas');
+        const ctx = canvas.getContext('2d');
+        const segments = [50, 70, 90, 100, 120, 140, 150, "Try Again"];
+        const segmentColors = ['#7C3AED', '#1D183A', '#EC4899', '#1F1A44', '#06B6D4', '#282157', '#F59E0B', '#110E26'];
+        
+        let startAngle = 0;
+        const arc = Math.PI / (segments.length / 2);
+        let spinTimeout = null;
+        let isSpinning = false;
+        let autoSpinLoopRunning = false;
+
+        function drawWheel() {
+            ctx.clearRect(0,0,280,280);
+            for(let i = 0; i < segments.length; i++) {
+                const angle = startAngle + i * arc;
+                ctx.fillStyle = segmentColors[i];
+                ctx.beginPath();
+                ctx.arc(140, 140, 130, angle, angle + arc, false);
+                ctx.lineTo(140, 140);
+                ctx.fill();
+                ctx.strokeStyle = '#312E81';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Draw Text
+                ctx.save();
+                ctx.fillStyle = "#FFFFFF";
+                ctx.font = "bold 11px Poppins";
+                ctx.translate(140 + Math.cos(angle + arc/2) * 85, 140 + Math.sin(angle + arc/2) * 85);
+                ctx.rotate(angle + arc/2 + Math.PI/2);
+                const text = segments[i].toString();
+                ctx.fillText(text, -ctx.measureText(text).width/2, 0);
+                ctx.restore();
+            }
+        }
+
+        function switchSpinMode(mode) {
+            if(isSpinning || autoSpinLoopRunning) return;
+            currentSpinMode = mode;
+            if(mode === 'manual') {
+                document.getElementById('btn-mode-manual').className = "px-4 py-1.5 rounded-lg text-xs font-bold bg-accentPurp text-white transition-all";
+                document.getElementById('btn-mode-auto').className = "px-4 py-1.5 rounded-lg text-xs font-bold text-gray-400 transition-all";
+                document.getElementById('control-manual').classList.remove('hidden');
+                document.getElementById('control-auto').classList.add('hidden');
+                document.getElementById('auto-spin-limit-container').classList.add('hidden');
+            } else {
+                document.getElementById('btn-mode-manual').className = "px-4 py-1.5 rounded-lg text-xs font-bold text-gray-400 transition-all";
+                document.getElementById('btn-mode-auto').className = "px-4 py-1.5 rounded-lg text-xs font-bold bg-accentPurp text-white transition-all";
+                document.getElementById('control-manual').classList.add('hidden');
+                document.getElementById('control-auto').classList.remove('hidden');
+                document.getElementById('auto-spin-limit-container').classList.remove('hidden');
+                updateAutoSpinLimitUI();
+            }
+        }
+
+        function checkSpinLimit() {
+            const now = Date.now();
+            if (!state.lastSpinResetTime || (now - state.lastSpinResetTime >= 28 * 60 * 60 * 1000)) {
+                state.spinsToday = 0;
+                state.lastSpinResetTime = now;
+                saveState();
+            }
+            return state.spinsToday < 100;
+        }
+
+        function updateAutoSpinLimitUI() {
+            document.getElementById('auto-spin-count').innerText = state.spinsToday;
+        }
+
+        // Weighted Probability: 50, 70, 90, 100 are heavy targets.
+        function getWeightedTarget() {
+            const roll = Math.random() * 100;
+            if (roll < 30) return 0; // 50 Coins
+            if (roll < 55) return 1; // 70 Coins
+            if (roll < 75) return 2; // 90 Coins
+            if (roll < 90) return 3; // 100 Coins
+            if (roll < 95) return 4; // 120 Coins
+            if (roll < 97) return 5; // 140 Coins
+            if (roll < 99) return 6; // 150 Coins
+            return 7; // Try Again
+        }
+
+        function spinToSegment(targetIndex, onComplete) {
+            isSpinning = true;
+            const spinVel = 20 + Math.random() * 5;
+            let currentRotation = 0;
+            const targetAngle = (3 * Math.PI / 2) - (targetIndex * arc) - (arc / 2);
+            let angleGap = (targetAngle - startAngle) % (2 * Math.PI);
+            if(angleGap < 0) angleGap += 2 * Math.PI;
+
+            const totalRotationNeeded = (Math.PI * 2 * 6) + angleGap; 
+            let curVel = spinVel;
+            let currentAngleTurned = 0;
+
+            function animate() {
+                if(curVel > 0.1) {
+                    curVel *= 0.982; // Friction deceleration
+                    startAngle += curVel * 0.1;
+                    drawWheel();
+                    requestAnimationFrame(animate);
+                } else {
+                    isSpinning = false;
+                    const finalIndex = Math.floor(((3 * Math.PI / 2) - startAngle) / arc) % segments.length;
+                    const sanitizedIndex = finalIndex < 0 ? finalIndex + segments.length : finalIndex;
+                    onComplete(sanitizedIndex);
+                }
+            }
+            animate();
+        }
+
+        // MANUAL SPIN PIPELINE
+        let isFirstFreeSpinUsed = false; 
+
+        function handleManualSpin() {
+            if (isSpinning) return;
+
+            if (!isFirstFreeSpinUsed) {
+                // Free Spin
+                isFirstFreeSpinUsed = true;
+                executeSpinAnimation();
+            } else {
+                // Needs Rewarded Ad
+                triggerRewardedAd('adsgram', () => {
+                    executeSpinAnimation();
+                });
+            }
+        }
+
+        function executeSpinAnimation() {
+            const targetSegmentIdx = getWeightedTarget();
+            spinToSegment(targetSegmentIdx, (resultIndex) => {
+                const prize = segments[resultIndex];
+                
+                setTimeout(() => {
+                    showClaimPopup(prize);
+                }, 500);
+            });
+        }
+
+        function showClaimPopup(prize) {
+            const popup = document.getElementById('claim-popup');
+            const rewardText = document.getElementById('popup-reward-text');
+            const claimBtn = document.getElementById('btn-popup-claim');
+
+            if (prize === "Try Again") {
+                rewardText.innerText = "Try Again!";
+                claimBtn.innerHTML = "Close";
+                claimBtn.onclick = () => { popup.classList.add('hidden'); };
+            } else {
+                rewardText.innerText = `+${prize} Coins 🪙`;
+                claimBtn.innerHTML = `<i class="fa-solid fa-video mr-1"></i> Watch Ad to Claim`;
+                claimBtn.onclick = () => {
+                    triggerRewardedAd('adsgram', () => {
+                        state.coins += prize;
+                        saveState();
+                        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                        popup.classList.add('hidden');
+                        switchView('home');
+                    });
+                };
+            }
+            popup.classList.remove('hidden');
+        }
+
+        // AUTO SPIN PIPELINE
+        function startAutoSpinLoop() {
+            if(autoSpinLoopRunning) return;
+            if(!checkSpinLimit()) {
+                alert("আপনার ২৮ ঘণ্টার অটো স্পিন লিমিট (১০০ বার) শেষ হয়েছে। অনুগ্রহ করে পরে চেষ্টা করুন।");
+                return;
+            }
+
+            autoSpinLoopRunning = true;
+            document.getElementById('btn-spin-auto-start').disabled = true;
+            document.getElementById('btn-spin-auto-start').classList.add('opacity-50');
+            document.getElementById('btn-spin-auto-stop').disabled = false;
+
+            runAutoSpinIteration();
+        }
+
+        function stopAutoSpinLoop() {
+            autoSpinLoopRunning = false;
+            document.getElementById('btn-spin-auto-start').disabled = false;
+            document.getElementById('btn-spin-auto-start').classList.remove('opacity-50');
+            document.getElementById('btn-spin-auto-stop').disabled = true;
+        }
+
+        function runAutoSpinIteration() {
+            if(!autoSpinLoopRunning) return;
+            
+            if(!checkSpinLimit()) {
+                alert("আপনার স্পিন লিমিট শেষ হওয়ায় অটো-স্পিন বন্ধ করা হয়েছে।");
+                stopAutoSpinLoop();
+                return;
+            }
+
+            // Step 1: Trigger Rewarded Ad
+            triggerRewardedAd('adsgram', () => {
+                if(!autoSpinLoopRunning) return;
+
+                // Step 2: Spin Wheel
+                const targetIdx = getWeightedTarget();
+                spinToSegment(targetIdx, (finalIdx) => {
+                    if(!autoSpinLoopRunning) return;
+
+                    const prize = segments[finalIdx];
+                    if (prize !== "Try Again") {
+                        // Auto Claim Reward
+                        state.coins += prize;
+                        state.spinsToday++;
+                        saveState();
+                        updateAutoSpinLimitUI();
+                        confetti({ particleCount: 30, spread: 45, origin: { y: 0.8 } });
+                    }
+
+                    // Step 3: Pause 1.5s and restart
+                    setTimeout(() => {
+                        runAutoSpinIteration();
+                    }, 1500);
+                });
+            });
+        }
+
+        // 6. DAILY REWARD SYSTEM
+        const dailyRewards = [10, 20, 30, 50, 70, 90, 100];
+
+        function checkDailyRewardStatus() {
+            const todayUTC = new Date().getUTCDay(); // Basic dynamic mapping
+            const now = Date.now();
+            
+            // Map Day sequence
+            const lastClaim = state.lastDailyClaimTime;
+            let canClaim = false;
+
+            if (!lastClaim) {
+                canClaim = true;
+            } else {
+                // Check if last claim was on a previous UTC calendar day
+                const lastDate = new Date(lastClaim);
+                const nowDate = new Date(now);
+                
+                const lastClaimDayUTC = Math.floor(lastClaim / (24 * 60 * 60 * 1000));
+                const currentDayUTC = Math.floor(now / (24 * 60 * 60 * 1000));
+
+                if (currentDayUTC > lastClaimDayUTC) {
+                    canClaim = true;
+                    // Increment claim counter, reset to day 1 after 7
+                    if (state.currentDay >= 7) {
+                        state.currentDay = 1;
+                    } else {
+                        state.currentDay++;
+                    }
+                    saveState();
+                }
+            }
+
+            renderDailyGrid(canClaim);
+        }
+
+        function renderDailyGrid(canClaim) {
+            const grid = document.getElementById('daily-grid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= 7; i++) {
+                const dayVal = dailyRewards[i-1];
+                let cardClass = "bg-darkBg/60 border border-purple-900/40 p-2.5 rounded-xl text-center flex flex-col items-center justify-center gap-1";
+                let highlightClass = "";
+
+                if (i === state.currentDay) {
+                    if (canClaim) {
+                        cardClass = "bg-gradient-to-tr from-accentPurp to-accentPink border border-pink-400 p-2.5 rounded-xl text-center flex flex-col items-center justify-center gap-1 scale-105 animate-pulse";
+                    } else {
+                        // Claimed today already
+                        cardClass = "bg-green-950/40 border border-green-500/30 p-2.5 rounded-xl text-center flex flex-col items-center justify-center gap-1";
+                    }
+                } else if (i < state.currentDay) {
+                    // Previously Claimed
+                    cardClass = "bg-slate-900/60 opacity-65 border border-slate-800 p-2.5 rounded-xl text-center flex flex-col items-center justify-center gap-1";
+                }
+
+                grid.innerHTML += `
+                    <div class="${cardClass}">
+                        <span class="text-[10px] text-gray-300">Day ${i}</span>
+                        <span class="text-xs">🪙</span>
+                        <span class="text-xs font-black">${dayVal}</span>
+                    </div>
+                `;
+            }
+
+            const claimBtn = document.getElementById('btn-claim-daily');
+            if (canClaim) {
+                claimBtn.disabled = false;
+                claimBtn.className = "w-full bg-gradient-to-r from-accentPurp to-accentPink hover:opacity-90 active:scale-95 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1 shadow-lg";
+                claimBtn.innerHTML = `<i class="fa-solid fa-gift"></i> Claim Day ${state.currentDay} Reward`;
+            } else {
+                claimBtn.disabled = true;
+                claimBtn.className = "w-full bg-slate-800 text-slate-500 py-2.5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-1 cursor-not-allowed";
+                claimBtn.innerHTML = `<i class="fa-solid fa-check"></i> Claimed Today`;
+            }
+        }
+
+        function claimDailyReward() {
+            triggerRewardedAd('adsgram', () => {
+                const reward = dailyRewards[state.currentDay - 1];
+                state.coins += reward;
+                state.lastDailyClaimTime = Date.now();
+                saveState();
+                confetti({ particleCount: 80, spread: 60 });
+                checkDailyRewardStatus();
+            });
+        }
+
+
+        // 7. HTML5 CANVAS BUBBLE SHOOTER GAME SYSTEM
+        let gameActive = false;
+        let gameScore = 0;
+        let gameTimeLeft = 30;
+        let gameInterval = null;
+        let spawnTimer = null;
+        let bubblesArray = [];
+        let particlesArray = [];
+        const gameCanvas = document.getElementById('game-canvas');
+        const gameCtx = gameCanvas.getContext('2d');
+
+        class Bubble {
+            constructor(canvasWidth, canvasHeight, level) {
+                this.x = Math.random() * (canvasWidth - 40) + 20;
+                this.y = canvasHeight + 30;
+                this.radius = Math.random() * 15 + 15; // Random sizes
+                this.speed = (Math.random() * 2 + 1) + (level * 0.3); // Speed scales up with levels
+                this.color = `hsl(${Math.random() * 360}, 85%, 60%)`;
+                this.markedForDeletion = false;
+            }
+            update() {
+                this.y -= this.speed;
+                if(this.y < -30) this.markedForDeletion = true;
+            }
+            draw(context) {
+                context.beginPath();
+                context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                context.fillStyle = this.color;
+                context.fill();
+                context.strokeStyle = "rgba(255,255,255,0.4)";
+                context.lineWidth = 1.5;
+                context.stroke();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.radius = Math.random() * 3 + 1;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.alpha = 1;
+                this.color = color;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= 0.04;
+            }
+            draw(context) {
+                context.save();
+                context.globalAlpha = this.alpha;
+                context.beginPath();
+                context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                context.fillStyle = this.color;
+                context.fill();
+                context.restore();
+            }
+        }
+
+        function startGameWithAd() {
+            triggerRewardedAd('adsgram', () => {
+                document.getElementById('game-lobby').classList.add('hidden');
+                document.getElementById('game-arena').classList.remove('hidden');
+                initGameEngine();
+            });
+        }
+
+        function initGameEngine() {
+            gameActive = true;
+            gameScore = 0;
+            gameTimeLeft = 30;
+            bubblesArray = [];
+            particlesArray = [];
+
+            // Set canvas dynamic dimension
+            gameCanvas.width = gameCanvas.parentElement.clientWidth;
+            gameCanvas.height = gameCanvas.parentElement.clientHeight;
+
+            document.getElementById('game-level-indicator').innerText = state.currentLevel;
+            document.getElementById('game-score').innerText = `0 / ${10 + (state.currentLevel * 3)}`;
+            document.getElementById('game-timer').innerText = `${gameTimeLeft}s`;
+
+            // Canvas Click / Tap detection
+            gameCanvas.addEventListener('mousedown', handleTap);
+            gameCanvas.addEventListener('touchstart', handleTap);
+
+            // Level Engine Run
+            gameInterval = setInterval(() => {
+                gameTimeLeft--;
+                document.getElementById('game-timer').innerText = `${gameTimeLeft}s`;
+                if(gameTimeLeft <= 0) {
+                    endLevel(false);
+                }
+            }, 1000);
+
+            // Handle Dynamic Bubble Spawning
+            spawnTimer = setInterval(() => {
+                bubblesArray.push(new Bubble(gameCanvas.width, gameCanvas.height, state.currentLevel));
+            }, 600 - Math.min(state.currentLevel * 20, 300));
+
+            runGameLoop();
+        }
+
+        function runGameLoop() {
+            if(!gameActive) return;
+            gameCtx.fillStyle = '#05020C';
+            gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+            // Update & Draw Bubbles
+            bubblesArray.forEach((bubble, idx) => {
+                bubble.update();
+                bubble.draw(gameCtx);
+                if(bubble.markedForDeletion) {
+                    bubblesArray.splice(idx, 1);
+                }
+            });
+
+            // Update & Draw Pop Particles
+            particlesArray.forEach((p, idx) => {
+                p.update();
+                p.draw(gameCtx);
+                if(p.alpha <= 0) {
+                    particlesArray.splice(idx, 1);
+                }
+            });
+
+            requestAnimationFrame(runGameLoop);
+        }
+
+        function handleTap(e) {
+            e.preventDefault();
+            let clickX, clickY;
+            
+            if(e.touches) {
+                const rect = gameCanvas.getBoundingClientRect();
+                clickX = e.touches[0].clientX - rect.left;
+                clickY = e.touches[0].clientY - rect.top;
+            } else {
+                clickX = e.offsetX;
+                clickY = e.offsetY;
+            }
+
+            // Detect Hit collision
+            bubblesArray.forEach((bubble, idx) => {
+                const dist = Math.hypot(clickX - bubble.x, clickY - bubble.y);
+                if(dist < bubble.radius) {
+                    // Spawn explosion particles
+                    for(let i=0; i<8; i++) {
+                        particlesArray.push(new Particle(bubble.x, bubble.y, bubble.color));
+                    }
+                    bubblesArray.splice(idx, 1);
+                    gameScore++;
+                    const targetScore = 10 + (state.currentLevel * 3);
+                    document.getElementById('game-score').innerText = `${gameScore} / ${targetScore}`;
+
+                    if (gameScore >= targetScore) {
+                        endLevel(true);
+                    }
+                }
+            });
+        }
+
+        function endLevel(victory) {
+            cleanupGameEngine();
+            if(victory) {
+                // Winning calculation
+                const coinReward = 100 + (state.currentLevel * 10);
+                const ticketReward = 5;
+                state.coins += coinReward;
+                state.tickets += ticketReward;
+                state.currentLevel++;
+                saveState();
+                confetti({ particleCount: 150, spread: 80 });
+                alert(`অভিনন্দন! আপনি Level ${state.currentLevel - 1} সম্পন্ন করেছেন। পুরস্কার: ${coinReward} 🪙 এবং ${ticketReward} 💎`);
+            } else {
+                alert(`লেভেল ব্যর্থ হয়েছে! লেভেলটি পুনরায় খেলতে Ad দেখে আবার চেষ্টা করুন।`);
+            }
+            exitGame();
+        }
+
+        function cleanupGameEngine() {
+            gameActive = false;
+            clearInterval(gameInterval);
+            clearInterval(spawnTimer);
+            gameCanvas.removeEventListener('mousedown', handleTap);
+            gameCanvas.removeEventListener('touchstart', handleTap);
+        }
+
+        function exitGame() {
+            cleanupGameEngine();
+            document.getElementById('game-lobby').classList.remove('hidden');
+            document.getElementById('game-arena').classList.add('hidden');
+            document.getElementById('lobby-level').innerText = `Level ${state.currentLevel}`;
+        }
+
+
+        // 8. TASKS PLATFORM SYSTEM (Adsgram & Monetag)
+        function switchTaskTab(tabNo) {
+            if(tabNo === 1) {
+                document.getElementById('btn-task-tab-1').className = "flex-1 text-center py-2 rounded-lg text-xs font-bold bg-accentPurp transition-all";
+                document.getElementById('btn-task-tab-2').className = "flex-1 text-center py-2 rounded-lg text-xs font-bold text-gray-400 transition-all";
+                document.getElementById('task-container-1').classList.remove('hidden');
+                document.getElementById('task-container-2').classList.add('hidden');
+            } else {
+                document.getElementById('btn-task-tab-1').className = "flex-1 text-center py-2 rounded-lg text-xs font-bold text-gray-400 transition-all";
+                document.getElementById('btn-task-tab-2').className = "flex-1 text-center py-2 rounded-lg text-xs font-bold bg-accentPurp transition-all";
+                document.getElementById('task-container-1').classList.add('hidden');
+                document.getElementById('task-container-2').classList.remove('hidden');
+            }
+        }
+
+        function renderTasks() {
+            // Render Adsgram (Task-1)
+            const adsgramList = document.getElementById('adsgram-tasks-list');
+            adsgramList.innerHTML = '';
+            for(let i=0; i<5; i++) {
+                const progress = state.adsgramProgress[i];
+                const isClaimed = state.completedAdsgramTasks[i];
+                const isReady = progress >= 25;
+                
+                let btnHtml = "";
+                if(isClaimed) {
+                    btnHtml = `<button class="px-3 py-1.5 bg-green-900/30 text-green-400 border border-green-800 rounded-lg text-xs font-bold cursor-not-allowed flex items-center gap-1" disabled><i class="fa-solid fa-check-double"></i> Claimed</button>`;
+                } else if(isReady) {
+                    btnHtml = `<button onclick="claimTaskReward(1, ${i})" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-slate-900 rounded-lg text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-gift"></i> Claim 50💎</button>`;
+                } else {
+                    btnHtml = `<button onclick="executeTaskAd(1, ${i})" class="px-3 py-1.5 bg-accentPurp hover:bg-purple-600 text-white rounded-lg text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-video"></i> Watch Ad</button>`;
+                }
+
+                adsgramList.innerHTML += `
+                    <div class="bg-cardBg p-3 rounded-xl border border-purple-900/20 flex justify-between items-center">
+                        <div>
+                            <p class="text-xs font-semibold">টাস্ক #${i+1}: Watch 25 Ads</p>
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <span class="text-[10px] text-gray-400">অগ্রগতি:</span>
+                                <span class="text-[11px] font-bold text-cyan-400">${progress}/25</span>
+                            </div>
+                        </div>
+                        ${btnHtml}
+                    </div>
+                `;
+            }
+
+            // Render Monetag (Task-2)
+            const monetagList = document.getElementById('monetag-tasks-list');
+            monetagList.innerHTML = '';
+            for(let i=0; i<5; i++) {
+                const progress = state.monetagProgress[i];
+                const isClaimed = state.completedMonetagTasks[i];
+                const isReady = progress >= 50;
+                
+                let btnHtml = "";
+                if(isClaimed) {
+                    btnHtml = `<button class="px-3 py-1.5 bg-green-900/30 text-green-400 border border-green-800 rounded-lg text-xs font-bold cursor-not-allowed flex items-center gap-1" disabled><i class="fa-solid fa-check-double"></i> Claimed</button>`;
+                } else if(isReady) {
+                    btnHtml = `<button onclick="claimTaskReward(2, ${i})" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-slate-900 rounded-lg text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-gift"></i> Claim 50💎</button>`;
+                } else {
+                    btnHtml = `<button onclick="executeTaskAd(2, ${i})" class="px-3 py-1.5 bg-accentCyan hover:bg-cyan-500 text-slate-900 rounded-lg text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-video"></i> Watch Ad</button>`;
+                }
+
+                monetagList.innerHTML += `
+                    <div class="bg-cardBg p-3 rounded-xl border border-purple-900/20 flex justify-between items-center">
+                        <div>
+                            <p class="text-xs font-semibold">টাস্ক #${i+1}: Watch 50 Ads</p>
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <span class="text-[10px] text-gray-400">অগ্রগতি:</span>
+                                <span class="text-[11px] font-bold text-cyan-400">${progress}/50</span>
+                            </div>
+                        </div>
+                        ${btnHtml}
+                    </div>
+                `;
+            }
+        }
+
+        function executeTaskAd(provider, taskIdx) {
+            const platformType = provider === 1 ? 'adsgram' : 'monetag';
+            triggerRewardedAd(platformType, () => {
+                if(provider === 1) {
+                    state.adsgramProgress[taskIdx]++;
+                } else {
+                    state.monetagProgress[taskIdx]++;
+                }
+                saveState();
+                renderTasks();
+            });
+        }
+
+        function claimTaskReward(provider, taskIdx) {
+            if(provider === 1) {
+                if(state.adsgramProgress[taskIdx] >= 25 && !state.completedAdsgramTasks[taskIdx]) {
+                    state.tickets += 50;
+                    state.completedAdsgramTasks[taskIdx] = true;
+                }
+            } else {
+                if(state.monetagProgress[taskIdx] >= 50 && !state.completedMonetagTasks[taskIdx]) {
+                    state.tickets += 50;
+                    state.completedMonetagTasks[taskIdx] = true;
+                }
+            }
+            saveState();
+            confetti({ particleCount: 100, spread: 60 });
+            renderTasks();
+        }
+
+
+        // 9. WALLET, CONVERTOR & PAYMENT SYSTEM
+        const packageRates = {
+            "2": { coins: 2000000, tickets: 2000, fee: 0.05, receives: 0.15 },
+            "5": { coins: 5000000, tickets: 5000, fee: 0.10, receives: 0.40 },
+            "10": { coins: 10000000, tickets: 10000, fee: 0.20, receives: 0.85 }
+        };
+
+        let isWalletConnected = false;
+        let mockWalletAddress = "";
+
+        function updateWalletUI() {
+            document.getElementById('wallet-coins').innerText = Math.floor(state.coins).toLocaleString();
+            document.getElementById('wallet-tickets').innerText = Math.floor(state.tickets).toLocaleString();
+            updateWithdrawDetails();
+            renderPaymentHistory();
+        }
+
+        function toggleWalletConnection() {
+            const connectBtn = document.getElementById('btn-wallet-connect');
+            const addressDisplay = document.getElementById('wallet-address-display');
+            const connectText = document.getElementById('wallet-connect-text');
+
+            if(!isWalletConnected) {
+                // Simulate TON wallet generation
+                mockWalletAddress = "EQ" + Array.from({length: 42}, () => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 62)]).join("");
+                isWalletConnected = true;
+                connectBtn.className = "w-full bg-green-600 hover:bg-green-700 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg";
+                connectText.innerText = "Wallet Connected";
+                addressDisplay.innerText = `Connected: ${mockWalletAddress.substring(0,8)}...${mockWalletAddress.substring(34)}`;
+                addressDisplay.classList.remove('hidden');
+            } else {
+                isWalletConnected = false;
+                mockWalletAddress = "";
+                connectBtn.className = "w-full bg-accentPurp hover:bg-purple-600 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg";
+                connectText.innerText = "Connect Crypto Wallet";
+                addressDisplay.classList.add('hidden');
+            }
+            updateWithdrawDetails();
+        }
+
+        function updateWithdrawDetails() {
+            const selectVal = document.getElementById('withdraw-package-select').value;
+            const pkg = packageRates[selectVal];
+
+            document.getElementById('detail-coins').innerText = `${pkg.coins.toLocaleString()} 🪙`;
+            document.getElementById('detail-tickets-needed').innerText = `${pkg.tickets.toLocaleString()} 💎`;
+            document.getElementById('detail-will-receive').innerText = `${pkg.receives} TON / 💎`;
+
+            const submitBtn = document.getElementById('btn-withdraw-submit');
+            
+            // Validation Logic: User must have wallet connected + sufficient balance
+            const hasSufficientCoins = state.coins >= pkg.coins;
+            const hasSufficientTickets = state.tickets >= pkg.tickets;
+
+            if (isWalletConnected && hasSufficientCoins && hasSufficientTickets) {
+                submitBtn.disabled = false;
+                submitBtn.className = "w-full bg-gradient-to-r from-accentCyan to-accentPurp hover:opacity-90 active:scale-95 text-slate-950 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg";
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.className = "w-full bg-gray-700 text-gray-500 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-not-allowed";
+            }
+        }
+
+        function submitWithdrawal() {
+            const selectVal = document.getElementById('withdraw-package-select').value;
+            const pkg = packageRates[selectVal];
+
+            if(state.coins < pkg.coins || state.tickets < pkg.tickets) {
+                alert("ব্যালেন্স অপর্যাপ্ত!");
+                return;
+            }
+
+            // Deduct Balances
+            state.coins -= pkg.coins;
+            state.tickets -= pkg.tickets;
+
+            // Generate history transaction
+            const now = new Date();
+            const dateStr = `${now.getUTCDate()}/${now.getUTCMonth()+1}/${now.getUTCFullYear()} UTC`;
+            
+            const txn = {
+                id: Math.random().toString(36).substr(2, 9).toUpperCase(),
+                amount: `${pkg.receives} TON`,
+                coinsUsed: pkg.coins,
+                date: dateStr,
+                status: "Pending" // Initial state is pending
+            };
+
+            // Maintain max 10 records
+            state.paymentHistory.unshift(txn);
+            if(state.paymentHistory.length > 10) state.paymentHistory.pop();
+
+            saveState();
+            updateWalletUI();
+            alert("আপনার উইথড্রয়াল রিকোয়েস্টটি পেন্ডিং লিস্টে পাঠানো হয়েছে। ২৪-৪৮ ঘণ্টার মধ্যে কনফার্ম করা হবে।");
+        }
+
+        function renderPaymentHistory() {
+            const historyContainer = document.getElementById('payment-history-container');
+            if (state.paymentHistory.length === 0) {
+                historyContainer.innerHTML = `
+                    <div class="py-4 text-slate-500 flex flex-col items-center gap-1">
+                        <i class="fa-solid fa-folder-open text-2xl mb-1 opacity-60"></i>
+                        <p>No transactions found</p>
+                    </div>
+                `;
+            } else {
+                historyContainer.innerHTML = `
+                    <p class="text-left font-semibold text-purple-400 mb-2">সর্বশেষ ১০টি লেনদেনের তালিকা:</p>
+                    <div class="space-y-1.5 text-left">
+                        ${state.paymentHistory.map(tx => `
+                            <div class="bg-darkBg p-2.5 rounded-lg border border-purple-950/50 flex justify-between items-center text-[11px]">
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="font-bold text-purple-300">TXID: ${tx.id}</span>
+                                        <span class="text-[9px] text-gray-400">(${tx.date})</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-400 mt-0.5">${tx.coinsUsed.toLocaleString()} Coins 🪙 matched</div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="font-black text-white">${tx.amount}</span>
+                                    <div class="text-[9px] font-bold ${tx.status === 'Pending' ? 'text-yellow-500' : 'text-green-500'}">${tx.status}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+
+
+        // 10. SYSTEM BOOTSTRAPPER
+        window.addEventListener('DOMContentLoaded', () => {
+            // Initial render and setup
+            updateHeaderBalances();
+            switchView('home');
+            renderTasks();
+        });
+    </script>
+</body>
+</html>
